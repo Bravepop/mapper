@@ -155,6 +155,13 @@ input[type='checkbox'] {
   border-right: 1px solid var(--border);
 }
 
+#toolbar .tool-sep {
+  width: 28px;
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
 #toolbar .icon-btn {
   width: 36px;
   height: 36px;

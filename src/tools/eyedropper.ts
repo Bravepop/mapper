@@ -39,7 +39,8 @@ export class EyedropperTool implements Tool {
 
   onUp(): void {}
 
-  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor): void {
+  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor | null): void {
+    if (!cursor) return;
     const p = new Path2D();
     p.arc(cursor.sx, cursor.sy, 7, 0, Math.PI * 2);
     strokeTwoTone(ctx, p);

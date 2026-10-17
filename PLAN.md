@@ -62,7 +62,7 @@ Built in this order:
    - A layers panel to show/hide, lock, set opacity and reorder each layer. Painting goes to the active layer.
    - Fill reads the active layer by default, with an option to use all visible layers as its boundaries.
    - Undo, autosave and `.vmap` are per-layer. `.vmap` moves to version 2; v1 files load into the Biomes layer.
-2. [ ] **Shapes:** line, polyline, rectangle, ellipse, each as an outline or filled.
+2. [x] **Shapes:** line, polyline, rectangle, ellipse, each as an outline or filled.
    - Polyline: click to add points; double-click or Enter finishes; Esc cancels.
    - Shift snaps to 45°.
    - Shapes rasterize hard-edged into the active layer, like the brush, so fill keeps working.

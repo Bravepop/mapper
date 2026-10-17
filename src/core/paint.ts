@@ -65,6 +65,66 @@ export function strokeSegment(
   }
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** Stamp along a chain of points (closing it back to the start if `closed`). */
+export function strokePath(edit: Edit, pts: Point[], r: number, color: string | null, closed = false): void {
+  if (pts.length === 0) return;
+  stamp(edit, pts[0].x, pts[0].y, r, color);
+  for (let i = 1; i < pts.length; i++) strokeSegment(edit, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, r, color);
+  if (closed && pts.length > 2) {
+    const a = pts[pts.length - 1];
+    strokeSegment(edit, a.x, a.y, pts[0].x, pts[0].y, r, color);
+  }
+}
+
+/** Paint pixels x0..x1 (inclusive) of row y, across however many tiles that spans. */
+function fillRow(edit: Edit, y: number, x0: number, x1: number, color: string): void {
+  if (Math.abs(y) > PAINT_LIMIT) return;
+  x0 = Math.max(x0, -PAINT_LIMIT);
+  x1 = Math.min(x1, PAINT_LIMIT);
+  if (x1 < x0) return;
+  const ty = tileIndex(y);
+  const py = y - ty * TILE_SIZE;
+  for (let tx = tileIndex(x0); tx <= tileIndex(x1); tx++) {
+    const ox = tx * TILE_SIZE;
+    const a = Math.max(x0, ox);
+    const b = Math.min(x1, ox + TILE_SIZE - 1);
+    const ctx = edit.touch(tx, ty).ctx;
+    ctx.fillStyle = color;
+    ctx.fillRect(a - ox, py, b - a + 1, 1);
+  }
+}
+
+/**
+ * Fill a polygon hard-edged (even-odd rule): a pixel is painted when its
+ * center is inside. Like the brush, there's no anti-aliasing.
+ */
+export function fillPolygon(edit: Edit, pts: Point[], color: string): void {
+  if (pts.length < 3) return;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of pts) {
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  }
+  const xs: number[] = [];
+  for (let py = Math.floor(minY); py <= Math.floor(maxY); py++) {
+    const yc = py + 0.5;
+    xs.length = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      if ((a.y <= yc && yc < b.y) || (b.y <= yc && yc < a.y)) xs.push(a.x + ((yc - a.y) * (b.x - a.x)) / (b.y - a.y));
+    }
+    xs.sort((m, n) => m - n);
+    for (let i = 0; i + 1 < xs.length; i += 2) fillRow(edit, py, Math.ceil(xs[i] - 0.5), Math.floor(xs[i + 1] - 0.5), color);
+  }
+}
+
 export function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];

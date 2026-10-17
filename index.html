@@ -13,10 +13,13 @@
         <div class="group" id="file-actions"></div>
         <div class="group" id="history-actions"></div>
         <div class="group" id="size-group">
-          <label for="size">Size</label>
+          <label for="size" id="size-label">Size</label>
           <input type="range" id="size" />
           <input type="number" id="size-value" class="num" />
           <span class="unit">m</span>
+        </div>
+        <div class="group" id="shape-group">
+          <label title="Fill rectangles, ellipses and closed polylines"><input type="checkbox" id="shape-fill" /> Filled</label>
         </div>
         <div class="group" id="tolerance-group">
           <label for="tolerance">Tolerance</label>
@@ -63,6 +66,8 @@
             <dt>Pan</dt><dd>Right / middle drag, or Space + drag</dd>
             <dt>Zoom</dt><dd>Mouse wheel, + / −</dd>
             <dt>Straight line</dt><dd>Shift + click</dd>
+            <dt>Snap / square</dt><dd>Hold Shift with shapes</dd>
+            <dt>Polyline</dt><dd>Double-click or Enter ends, Esc cancels</dd>
             <dt>Pick color</dt><dd>Alt + click</dd>
             <dt>Brush size</dt><dd>[ and ]</dd>
             <dt>Spawn</dt><dd>H</dd>

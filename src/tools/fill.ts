@@ -109,7 +109,8 @@ export class FillTool implements Tool {
   onMove(): void {}
   onUp(): void {}
 
-  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor): void {
+  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor | null): void {
+    if (!cursor) return;
     // A small bucket-ish marker: a diamond at the hotspot.
     const p = new Path2D();
     const { sx: x, sy: y } = cursor;

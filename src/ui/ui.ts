@@ -8,13 +8,20 @@ import { ICONS } from './icons';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const TOOLS: { id: ToolId; label: string; key: string; hint: string }[] = [
+const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boolean }[] = [
   { id: 'pencil', label: 'Pencil', key: 'P', hint: '1 m hard line' },
   { id: 'brush', label: 'Brush', key: 'B', hint: 'Sized round brush' },
   { id: 'eraser', label: 'Eraser', key: 'E', hint: 'Erase back to parchment' },
   { id: 'fill', label: 'Fill', key: 'G', hint: 'Fill an enclosed area (within the visible map)' },
   { id: 'eyedropper', label: 'Eyedropper', key: 'I', hint: 'Pick a color from the map (or Alt+click with any tool)' },
+  { id: 'line', label: 'Line', key: 'L', hint: 'Drag a straight line. Shift snaps to 45°', group: true },
+  { id: 'polyline', label: 'Polyline', key: 'Shift+L', hint: 'Click to add points; double-click or Enter to finish, Esc to cancel' },
+  { id: 'rect', label: 'Rectangle', key: 'R', hint: 'Drag a rectangle. Shift makes a square' },
+  { id: 'ellipse', label: 'Ellipse', key: 'O', hint: 'Drag an ellipse. Shift makes a circle' },
 ];
+
+const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse'];
+const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
 
 export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
   buildToolbar(app);
@@ -41,6 +48,7 @@ function buildToolbar(app: App): void {
   const buttons = TOOLS.map((t) => {
     const b = iconButton(ICONS[t.id], `${t.label} (${t.key}) — ${t.hint}`, () => app.update({ tool: t.id }));
     b.dataset.tool = t.id;
+    if (t.group) bar.append(Object.assign(document.createElement('hr'), { className: 'tool-sep' }));
     bar.append(b);
     return b;
   });
@@ -86,6 +94,9 @@ function buildTopbar(app: App, files: FileActions): void {
   const fillSample = $<HTMLSelectElement>('fill-sample');
   fillSample.addEventListener('change', () => app.update({ fillSample: fillSample.value as 'layer' | 'visible' }));
 
+  const shapeFill = $<HTMLInputElement>('shape-fill');
+  shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
+
   const grid = $<HTMLSelectElement>('grid-size');
   grid.innerHTML = GRID_SIZES.map((g) => `<option value="${g}">${g} m</option>`).join('');
   grid.addEventListener('change', () => app.update({ gridSize: Number(grid.value) }));
@@ -100,7 +111,10 @@ function buildTopbar(app: App, files: FileActions): void {
     fillSample.value = s.fillSample;
     grid.value = String(s.gridSize);
     showGrid.checked = s.showGrid;
-    $('size-group').hidden = !['brush', 'eraser'].includes(s.tool);
+    shapeFill.checked = s.shapeFill;
+    $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
+    $('size-label').textContent = s.tool === 'brush' || s.tool === 'eraser' ? 'Size' : 'Width';
+    $('shape-group').hidden = !FILLABLE_TOOLS.includes(s.tool);
     $('tolerance-group').hidden = s.tool !== 'fill';
   };
   app.onState(sync);
@@ -257,7 +271,16 @@ function buildStatus(app: App, files: FileActions, autosave: Autosave): void {
 }
 
 function bindShortcuts(app: App, files: FileActions): void {
-  const toolKeys: Record<string, ToolId> = { p: 'pencil', b: 'brush', e: 'eraser', g: 'fill', i: 'eyedropper' };
+  const toolKeys: Record<string, ToolId> = {
+    p: 'pencil',
+    b: 'brush',
+    e: 'eraser',
+    g: 'fill',
+    i: 'eyedropper',
+    l: 'line',
+    r: 'rect',
+    o: 'ellipse',
+  };
 
   window.addEventListener('keydown', (e) => {
     const ctrl = e.ctrlKey || e.metaKey;
@@ -277,8 +300,13 @@ function bindShortcuts(app: App, files: FileActions): void {
       return;
     }
     if (isTextInput(e.target) || e.altKey) return;
+    if (app.tool.onKey?.(e)) {
+      e.preventDefault();
+      return;
+    }
 
     if (key === 'g' && e.shiftKey) app.update({ showGrid: !app.state.showGrid });
+    else if (key === 'l' && e.shiftKey) app.update({ tool: 'polyline' });
     else if (toolKeys[key]) app.update({ tool: toolKeys[key] });
     else if (key === '[') app.update({ size: app.state.size - stepFor(app.state.size) });
     else if (key === ']') app.update({ size: app.state.size + stepFor(app.state.size) });

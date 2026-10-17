@@ -64,7 +64,7 @@ export class Renderer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawWorldEdge();
     this.drawSpawn();
-    if (this.app.cursor && !this.app.isPanning) this.app.tool.drawOverlay?.(ctx, this.app.cursor, cam);
+    if (!this.app.isPanning) this.app.tool.drawOverlay?.(ctx, this.app.cursor, cam);
     this.drawScaleBar();
   }
 

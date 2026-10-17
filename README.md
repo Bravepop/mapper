@@ -25,6 +25,9 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 | Pan | Right or middle drag, or hold Space and drag |
 | Zoom | Mouse wheel, `+` / `−` |
 | Straight line | Click, then Shift+click the end point |
+| Line / Polyline / Rectangle / Ellipse | `L` / `Shift+L` / `R` / `O` |
+| Snap to 45°, square, circle | Hold Shift while drawing a shape |
+| Finish / cancel a polyline | Double-click or `Enter` / `Esc` (`Backspace` removes the last point) |
 | Pick a color from the map | Alt+click (any tool) |
 | Brush size | `[` / `]` |
 | Toggle grid | `Shift+G` |
@@ -35,6 +38,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 - **Scale:** 1 pixel of paint is 1 meter. The status bar shows where the cursor is (meters E/W and N/S of spawn) and its distance from spawn. A scale bar sits in the bottom-left corner.
 - **Grid:** pick a cell size from 1 to 500 m. When you zoom out, the grid switches to coarser steps so the lines don't blur together.
 - **Layers:** the map has four layers: Biomes, Paths, Ink / Outlines and Notes. You always paint on the highlighted layer; click a layer's name to switch. Each layer can be hidden (eye), locked (padlock), faded with its opacity slider, or moved up and down. Locked and hidden layers can't be painted on.
+- **Shapes:** lines, polylines (coastlines, roads, rivers), rectangles and ellipses use the **Width** setting for their outline. Tick **Filled** to fill rectangles, ellipses and polylines. Click a polyline's first point to close it. Shapes are painted hard-edged into the active layer like the brush, so the fill bucket stops at them.
 - **Fill** only spreads across the part of the map you can see, up to 1 km from the click, so filling an open area doesn't flood the whole world. Raise **Tolerance** to fill across slight color differences. By default fill stops at lines on the layer you're painting; switch it to *all visible layers* to fill a biome right up to coastlines you drew on Ink.
 - **Autosave:** your map is saved in the browser about a second after each change and restored when you reopen the page. Use **Save** to keep a `.vmap` file as a real backup, since clearing browser data wipes the autosave.
 
@@ -45,7 +49,7 @@ src/
   app.ts            app state, input handling (pan/zoom/tool dispatch)
   core/             camera, layer stack and tiled raster layers, undo history, painting, autosave, .vmap file I/O
   render/           renderer and adaptive grid
-  tools/            pencil/brush/eraser (stroke.ts), fill, eyedropper
+  tools/            pencil/brush/eraser (stroke.ts), shapes, fill, eyedropper
   ui/               toolbar, palette, status bar, shortcuts
   valheim/          biome colors
 ```

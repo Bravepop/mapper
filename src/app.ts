@@ -4,6 +4,7 @@ import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
+import { ShapeTool } from './tools/shape';
 import { StrokeTool } from './tools/stroke';
 import type { Cursor, Tool, ToolEvent, ToolId } from './tools/tool';
 
@@ -16,6 +17,8 @@ export interface AppState {
   tolerance: number;
   /** What the fill bucket treats as boundaries: the active layer only, or every visible layer. */
   fillSample: 'layer' | 'visible';
+  /** Rectangles, ellipses and closed polylines are filled (true) or outlined (false). */
+  shapeFill: boolean;
   /** Grid cell size in meters. */
   gridSize: number;
   showGrid: boolean;
@@ -27,6 +30,7 @@ export const DEFAULT_STATE: AppState = {
   size: 8,
   tolerance: 32,
   fillSample: 'layer',
+  shapeFill: false,
   gridSize: 25,
   showGrid: true,
 };
@@ -61,6 +65,10 @@ export class App {
       eraser: new StrokeTool(this, 'eraser'),
       fill: new FillTool(this),
       eyedropper: this.eyedropper,
+      line: new ShapeTool(this, 'line'),
+      polyline: new ShapeTool(this, 'polyline'),
+      rect: new ShapeTool(this, 'rect'),
+      ellipse: new ShapeTool(this, 'ellipse'),
     };
     this.layers.onTiles(() => this.requestRender());
     this.layers.onChange(() => this.requestRender());
@@ -108,6 +116,7 @@ export class App {
 
   update(patch: Partial<AppState>): void {
     if (patch.tool && this.isDrawing) delete patch.tool;
+    if (patch.tool && patch.tool !== this.state.tool) this.tool.deactivate?.();
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
     Object.assign(this.state, patch);
     for (const fn of this.stateListeners) fn();
@@ -133,11 +142,13 @@ export class App {
   }
 
   undo(): void {
-    if (!this.isDrawing) this.history.undo();
+    if (this.isDrawing || this.tool.undoStep?.()) return;
+    this.history.undo();
   }
 
   redo(): void {
-    if (!this.isDrawing) this.history.redo();
+    if (this.isDrawing || this.tool.hasPending?.()) return;
+    this.history.redo();
   }
 
   zoomBy(factor: number): void {
@@ -152,6 +163,7 @@ export class App {
 
   /** Wipe the map (used by New and before loading a file). */
   resetDocument(): void {
+    this.tool.deactivate?.();
     this.layers.reset();
     this.history.clear();
     this.requestRender();
@@ -213,6 +225,8 @@ export class App {
       } else if (this.drawingId === e.pointerId) {
         const events = e.getCoalescedEvents?.() ?? [];
         for (const ce of events.length ? events : [e]) this.tool.onMove(this.toolEvent(ce));
+      } else if (!this.pan && !this.isDrawing) {
+        this.tool.onHover?.(this.toolEvent(e));
       }
       this.viewChanged();
     });

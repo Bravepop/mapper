@@ -1,6 +1,8 @@
 import type { Camera } from '../core/camera';
 
-export type ToolId = 'pencil' | 'brush' | 'eraser' | 'fill' | 'eyedropper';
+export type ShapeKind = 'line' | 'polyline' | 'rect' | 'ellipse';
+
+export type ToolId = 'pencil' | 'brush' | 'eraser' | 'fill' | 'eyedropper' | ShapeKind;
 
 /** Pointer position in world meters plus the modifiers tools care about. */
 export interface ToolEvent {
@@ -21,8 +23,21 @@ export interface Tool {
   onDown(e: ToolEvent): void;
   onMove(e: ToolEvent): void;
   onUp(): void;
-  /** Draw a cursor preview in CSS-pixel screen space. */
-  drawOverlay?(ctx: CanvasRenderingContext2D, cursor: Cursor, camera: Camera): void;
+  /** Pointer moved with no button held. */
+  onHover?(e: ToolEvent): void;
+  /** Key pressed while this tool is active. Return true if the tool handled it. */
+  onKey?(e: KeyboardEvent): boolean;
+  /** Undo a step of unfinished work (e.g. a polyline's last point). Return true if there was any. */
+  undoStep?(): boolean;
+  /** True while the tool has unfinished work between pointer presses (e.g. a polyline). */
+  hasPending?(): boolean;
+  /** Called when switching to another tool. Finishes or drops unfinished work. */
+  deactivate?(): void;
+  /**
+   * Draw a cursor preview in CSS-pixel screen space. `cursor` is null when the
+   * pointer is off the map, so tools with unfinished work can still show it.
+   */
+  drawOverlay?(ctx: CanvasRenderingContext2D, cursor: Cursor | null, camera: Camera): void;
 }
 
 /** Outline a shape in black and white so it shows on any background. */

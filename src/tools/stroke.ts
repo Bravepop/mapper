@@ -50,7 +50,8 @@ export class StrokeTool implements Tool {
     this.edit = null;
   }
 
-  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor, cam: Camera): void {
+  drawOverlay(ctx: CanvasRenderingContext2D, cursor: Cursor | null, cam: Camera): void {
+    if (!cursor) return;
     const cx = cam.toScreenX(Math.floor(cursor.wx) + 0.5);
     const cy = cam.toScreenY(Math.floor(cursor.wy) + 0.5);
     const path = new Path2D();
