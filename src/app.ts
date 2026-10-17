@@ -2,12 +2,14 @@ import { Camera } from './core/camera';
 import { History } from './core/history';
 import { CompassStore, type Compass, type CompassStyle } from './core/compass';
 import { LabelStore, type Label } from './core/labels';
+import { TileLayer } from './core/layer';
 import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
 import { CompassTool } from './tools/compass';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
 import { LabelEditor, LabelTool } from './tools/label';
+import { RevealTool } from './tools/reveal';
 import { RulerTool } from './tools/ruler';
 import { ShapeTool } from './tools/shape';
 import { StampTool } from './tools/stamp';
@@ -47,6 +49,10 @@ export interface AppState {
   paperGrain: boolean;
   agedEdges: boolean;
   sepia: boolean;
+  /** Cover unrevealed land with fog, and the Reveal tool's brush size (m) and mode. */
+  fog: boolean;
+  revealSize: number;
+  revealMode: 'reveal' | 'hide';
   /** Style and diameter (m) for a newly placed compass rose. */
   compassStyle: CompassStyle;
   compassSize: number;
@@ -71,6 +77,9 @@ export const DEFAULT_STATE: AppState = {
   paperGrain: true,
   agedEdges: true,
   sepia: false,
+  fog: false,
+  revealSize: 60,
+  revealMode: 'reveal',
   compassStyle: 'ornate',
   compassSize: 150,
   labelSize: 20,
@@ -83,6 +92,7 @@ export const DEFAULT_STATE: AppState = {
 export const MIN_SIZE = 1;
 export const MAX_SIZE = 200;
 export const MAX_SMOOTHING = 10;
+export const MAX_REVEAL_SIZE = 1000;
 export const MIN_GLYPH_SIZE = 4;
 export const MAX_GLYPH_SIZE = 200;
 /** Restyling a selected label becomes one undo step once the controls are idle this long (ms). */
@@ -93,6 +103,8 @@ export class App {
   readonly layers = new LayerStack();
   readonly labels = new LabelStore();
   readonly compass = new CompassStore();
+  /** Fog of war mask: painted pixels are revealed. Separate from the map layers. */
+  readonly fog = new TileLayer();
   readonly history = new History(() => this.layers.active.tiles, this.labels, this.compass);
   readonly renderer: Renderer;
   readonly tools: { [K in ToolId]: Tool };
@@ -136,12 +148,14 @@ export class App {
       stamp: new StampTool(this, labelEditor),
       compass: new CompassTool(this),
       ruler: new RulerTool(this),
+      reveal: new RevealTool(this),
       text: new LabelTool(this, 'text', labelEditor),
       select: new LabelTool(this, 'select', labelEditor),
     };
     this.layers.onTiles(() => this.requestRender());
     this.layers.onChange(() => this.requestRender());
     this.compass.onChange(() => this.requestRender());
+    this.fog.onChange(() => this.requestRender());
     this.labels.onChange(() => {
       // Undo can remove the selected label.
       if (this.selectedLabel && !this.labels.get(this.selectedLabel)) this.selectLabel(null);
@@ -263,6 +277,7 @@ export class App {
     if (patch.color && this.isLabelTool && this.selected) this.editLabel({ color: patch.color });
     if (patch.color && this.state.tool === 'compass' && this.compass.get()) this.editCompass({ color: patch.color });
     if (patch.smoothing !== undefined) patch.smoothing = Math.round(Math.min(MAX_SMOOTHING, Math.max(0, patch.smoothing)));
+    if (patch.revealSize !== undefined) patch.revealSize = Math.round(Math.min(MAX_REVEAL_SIZE, Math.max(MIN_SIZE, patch.revealSize)));
     if (patch.glyphSize !== undefined) patch.glyphSize = Math.round(Math.min(MAX_GLYPH_SIZE, Math.max(MIN_GLYPH_SIZE, patch.glyphSize)));
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
     Object.assign(this.state, patch);
@@ -321,6 +336,7 @@ export class App {
     this.compassEditBefore = undefined;
     this.compass.set(null);
     this.layers.reset();
+    this.fog.clear();
     this.labels.clear();
     this.history.clear();
     this.requestRender();

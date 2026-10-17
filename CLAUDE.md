@@ -1,6 +1,6 @@
 # Mapper
 
-Paint-style map maker for Valheim immersive mode. Vite + TypeScript + Canvas 2D, no UI framework. See PLAN.md for the roadmap (Phases 1–2 done; Phase 3 next) and README.md for controls and code layout.
+Paint-style map maker for Valheim immersive mode. Vite + TypeScript + Canvas 2D, no UI framework. See PLAN.md for the roadmap (Phases 1–3 done; Phase 4 next) and README.md for controls and code layout.
 
 The app is a set of drawing tools, not a navigation aid: it never works out positions for the user. Keep new features in that spirit.
 
@@ -23,6 +23,7 @@ The app is a set of drawing tools, not a navigation aid: it never works out posi
   - The compass rose (`core/compass.ts`) is a single object drawn above all layers; north always points up. Change it with `app.setCompass()`, or live with `app.editCompass()` / `flushCompassEdit()`.
 - Fill is bounded to the visible area, up to 1 km from the click. It reads the active layer, or all visible layers when `fillSample` is 'visible'.
 - Paper look (grain, aged edges, sepia) is display-only, in `render/paper.ts`.
-- Autosave writes changed tiles to IndexedDB under `layerId/tx,ty` keys (`core/storage.ts`); labels, the compass and layer settings go in the meta record. Older bare `tx,ty` keys migrate into Biomes.
-- Files are saved as `.vmap` version 2: JSON with every layer's settings and one PNG per tile, plus labels and the compass (`core/fileio.ts`). Version 1 files (one layer) load into Biomes.
+- Fog of war is a separate `TileLayer` mask (`app.fog`, painted = revealed), not one of the map layers. The Reveal tool edits it with `history.begin(app.fog)`; the renderer cuts it out of an off-screen fog canvas (`render/fog.ts`) when `state.fog` is on.
+- Autosave writes changed tiles to IndexedDB under `layerId/tx,ty` keys, and `fog/tx,ty` for the fog mask (`core/storage.ts`); labels, the compass and layer settings go in the meta record. Older bare `tx,ty` keys migrate into Biomes.
+- Files are saved as `.vmap` version 2: JSON with every layer's settings and one PNG per tile, plus labels, the compass and the fog mask (`core/fileio.ts`). Version 1 files (one layer) load into Biomes.
 - `window.mapper` exposes the App instance for debugging in the browser console.

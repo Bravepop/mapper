@@ -83,8 +83,9 @@ export class History {
     return this.redoStack.length > 0;
   }
 
-  begin(): Edit {
-    return new Edit(this.target());
+  /** Start an edit on the active layer, or on `layer` (e.g. the fog mask). */
+  begin(layer: TileLayer = this.target()): Edit {
+    return new Edit(layer);
   }
 
   /** Finish an edit as one undo step, optionally together with label changes (applied now). */

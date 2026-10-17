@@ -1,7 +1,7 @@
 import { DEFAULT_STATE, type App, type AppState } from '../app';
 import type { Compass } from './compass';
 import type { Label } from './labels';
-import { isTileEmpty } from './layer';
+import { isTileEmpty, type TileLayer } from './layer';
 import { isLayerId, type LayerId, type LayerProps } from './layers';
 import type { Autosave } from './storage';
 
@@ -21,7 +21,7 @@ interface VmapFile {
   version: 1 | 2;
   savedAt: string;
   camera: { x: number; y: number; zoom: number };
-  settings: Pick<AppState, 'gridSize' | 'showGrid'> & Partial<Pick<AppState, 'paperGrain' | 'agedEdges' | 'sepia'>>;
+  settings: Pick<AppState, 'gridSize' | 'showGrid'> & Partial<Pick<AppState, 'paperGrain' | 'agedEdges' | 'sepia' | 'fog'>>;
   /** v2 only. */
   activeLayer?: LayerId;
   layers: (Partial<LayerProps> & { id: string; name: string; tiles: VmapTile[] })[];
@@ -29,6 +29,8 @@ interface VmapFile {
   labels?: Label[];
   /** v2: the compass rose, if placed. */
   compass?: Compass | null;
+  /** v2: fog of war mask tiles (revealed = painted). */
+  fog?: VmapTile[];
 }
 
 const FILE_VERSION = 2;
@@ -48,6 +50,7 @@ export class FileActions {
     app.layers.onTiles(() => this.setModified(true));
     app.labels.onChange(() => this.setModified(true));
     app.compass.onChange(() => this.setModified(true));
+    app.fog.onChange(() => this.setModified(true));
   }
 
   get fileName(): string | null {
@@ -122,14 +125,22 @@ export class FileActions {
   }
 
   private serialize(): string {
-    const layers = this.app.layers.all.map(({ id, name, visible, locked, opacity, tiles }) => {
+    const pngs = (tiles: TileLayer) => {
       const out: VmapTile[] = [];
       for (const tile of tiles.values()) {
         if (isTileEmpty(tile)) continue;
         out.push({ x: tile.tx, y: tile.ty, png: tile.canvas.toDataURL('image/png') });
       }
-      return { id, name, visible, locked, opacity, tiles: out };
-    });
+      return out;
+    };
+    const layers = this.app.layers.all.map(({ id, name, visible, locked, opacity, tiles }) => ({
+      id,
+      name,
+      visible,
+      locked,
+      opacity,
+      tiles: pngs(tiles),
+    }));
     const { x, y, zoom } = this.app.camera;
     const file: VmapFile = {
       format: 'vmap',
@@ -142,11 +153,13 @@ export class FileActions {
         paperGrain: this.app.state.paperGrain,
         agedEdges: this.app.state.agedEdges,
         sepia: this.app.state.sepia,
+        fog: this.app.state.fog,
       },
       activeLayer: this.app.activeLayer.id,
       layers,
       labels: this.app.labels.all(),
       compass: this.app.compass.get(),
+      fog: pngs(this.app.fog),
     };
     return JSON.stringify(file);
   }
@@ -158,6 +171,7 @@ export class FileActions {
       throw new Error('This map was made by a newer version of Mapper.');
     }
     // v1 had one layer of paint, which becomes Biomes. v2 layers match by id; unknown ones are skipped.
+    const fogTiles = file.version === 2 && Array.isArray(file.fog) ? [{ id: 'fog' as const, tiles: file.fog }] : [];
     const layers =
       file.version === 1
         ? [{ id: 'biomes' as LayerId, tiles: file.layers[0]?.tiles ?? [] }]
@@ -165,7 +179,7 @@ export class FileActions {
 
     // Decode everything first so a bad file doesn't leave a half-cleared map.
     const images = await Promise.all(
-      layers.flatMap((l) =>
+      [...layers, ...fogTiles].flatMap((l) =>
         // createImageBitmap rather than img.decode(): decode() never settles while the page isn't rendering.
         (l.tiles ?? []).map(async (t) => {
           const img = await createImageBitmap(await (await fetch(t.png)).blob());
@@ -181,7 +195,8 @@ export class FileActions {
     this.app.labels.load(file.version === 2 ? file.labels : []);
     this.app.compass.load(file.version === 2 ? file.compass : null);
     for (const t of images) {
-      this.app.layers.get(t.layer).tiles.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
+      const target = t.layer === 'fog' ? this.app.fog : this.app.layers.get(t.layer).tiles;
+      target.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
       t.img.close();
     }
     Object.assign(this.app.camera, file.camera);
@@ -191,6 +206,7 @@ export class FileActions {
       paperGrain: file.settings?.paperGrain ?? DEFAULT_STATE.paperGrain,
       agedEdges: file.settings?.agedEdges ?? DEFAULT_STATE.agedEdges,
       sepia: file.settings?.sepia ?? DEFAULT_STATE.sepia,
+      fog: file.settings?.fog ?? DEFAULT_STATE.fog,
     });
     this.app.viewChanged();
   }

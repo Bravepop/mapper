@@ -3,6 +3,7 @@ import { TILE_SIZE, WORLD_RADIUS } from '../core/constants';
 import type { Tile, TileLayer } from '../core/layer';
 import { drawGrid } from './grid';
 import { drawCompass } from './compass';
+import { FogLayer } from './fog';
 import { drawLabel, outlineLabel } from './labels';
 import { drawAgedEdges, drawGrain, SEPIA_FILTER } from './paper';
 
@@ -14,6 +15,7 @@ export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private dpr = 1;
   private frame = 0;
+  private fogLayer = new FogLayer();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -74,6 +76,13 @@ export class Renderer {
     const compass = this.app.compass.get();
     if (compass) drawCompass(ctx, compass, cam);
     ctx.filter = 'none';
+    if (state.fog) {
+      const fctx = this.fogLayer.begin(cam, dpr, this.canvas.width, this.canvas.height);
+      this.drawTiles(this.app.fog, fctx, true);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.fogLayer.end(ctx);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
     if (state.paperGrain) drawGrain(ctx, cam);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -91,10 +100,11 @@ export class Renderer {
     this.drawScaleBar();
   }
 
-  private drawTiles(layer: TileLayer): void {
-    const { ctx, dpr } = this;
+  /** Draw a tile layer in device pixels. `smooth` blurs pixel edges when zoomed in (used for the fog mask). */
+  private drawTiles(layer: TileLayer, ctx = this.ctx, smooth = false): void {
+    const { dpr } = this;
     const cam = this.app.camera;
-    ctx.imageSmoothingEnabled = cam.zoom < 1;
+    ctx.imageSmoothingEnabled = smooth || cam.zoom < 1;
     ctx.imageSmoothingQuality = 'high';
 
     const r = cam.visibleRect();

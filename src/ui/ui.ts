@@ -1,4 +1,4 @@
-import { isTextInput, MAX_GLYPH_SIZE, MAX_SIZE, MAX_SMOOTHING, MIN_GLYPH_SIZE, MIN_SIZE, type App } from '../app';
+import { isTextInput, MAX_GLYPH_SIZE, MAX_REVEAL_SIZE, MAX_SIZE, MAX_SMOOTHING, MIN_GLYPH_SIZE, MIN_SIZE, type App } from '../app';
 import { MAX_COMPASS_SIZE, MIN_COMPASS_SIZE, type CompassStyle } from '../core/compass';
 import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
 import type { LineStyle } from '../core/paint';
@@ -27,14 +27,22 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
   { id: 'stamp', label: 'Stamp', key: 'S', hint: 'Click to place a map symbol' },
   { id: 'compass', label: 'Compass rose', key: 'C', hint: 'Click to place the compass rose, drag to move it' },
   { id: 'ruler', label: 'Ruler', key: 'M', hint: 'Drag to measure a distance', group: true },
+  { id: 'reveal', label: 'Reveal (fog of war)', key: 'F', hint: 'Paint to reveal explored land; turn on Fog of war in the Paper panel' },
   { id: 'text', label: 'Text', key: 'T', hint: 'Click the map to add a label, or click a label to edit it', group: true },
   { id: 'select', label: 'Select', key: 'V', hint: 'Select a label to move, restyle or delete it (double-click to edit)' },
 ];
 
-const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse', 'texture', 'stamp', 'ruler'];
+const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse', 'texture', 'stamp', 'ruler', 'reveal'];
 /** Tools whose Size is the symbol height (glyphSize) rather than the brush/line width. */
 const GLYPH_TOOLS: ToolId[] = ['texture', 'stamp'];
 const isGlyphTool = (app: App) => GLYPH_TOOLS.includes(app.state.tool);
+
+/** Which setting the Size control edits for the current tool, and its range. */
+function sizeSetting(app: App): { key: 'size' | 'glyphSize' | 'revealSize'; min: number; max: number } {
+  if (app.state.tool === 'reveal') return { key: 'revealSize', min: MIN_SIZE, max: MAX_REVEAL_SIZE };
+  if (isGlyphTool(app)) return { key: 'glyphSize', min: MIN_GLYPH_SIZE, max: MAX_GLYPH_SIZE };
+  return { key: 'size', min: MIN_SIZE, max: MAX_SIZE };
+}
 const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
 const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse', 'ruler'];
 const FREEHAND_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser'];
@@ -107,7 +115,10 @@ function buildTopbar(app: App, files: FileActions): void {
 
   const size = $<HTMLInputElement>('size');
   const sizeValue = $<HTMLInputElement>('size-value');
-  const setSize = (v: number) => app.update(isGlyphTool(app) ? { glyphSize: v || MIN_GLYPH_SIZE } : { size: v || MIN_SIZE });
+  const setSize = (v: number) => {
+    const { key, min } = sizeSetting(app);
+    app.update({ [key]: v || min });
+  };
   size.addEventListener('input', () => setSize(Number(size.value)));
   sizeValue.addEventListener('change', () => setSize(Number(sizeValue.value)));
 
@@ -202,6 +213,9 @@ function buildTopbar(app: App, files: FileActions): void {
   ruler.onChange(syncRuler);
   syncRuler();
 
+  const revealMode = $<HTMLSelectElement>('reveal-mode');
+  revealMode.addEventListener('change', () => app.update({ revealMode: revealMode.value as 'reveal' | 'hide' }));
+
   const stampLabel = $<HTMLInputElement>('stamp-label');
   stampLabel.addEventListener('change', () => app.update({ stampLabel: stampLabel.checked }));
 
@@ -216,10 +230,12 @@ function buildTopbar(app: App, files: FileActions): void {
 
   const sync = () => {
     const s = app.state;
-    const glyph = isGlyphTool(app);
-    size.min = sizeValue.min = String(glyph ? MIN_GLYPH_SIZE : MIN_SIZE);
-    size.max = sizeValue.max = String(glyph ? MAX_GLYPH_SIZE : MAX_SIZE);
-    size.value = sizeValue.value = String(glyph ? s.glyphSize : s.size);
+    const setting = sizeSetting(app);
+    size.min = sizeValue.min = String(setting.min);
+    size.max = sizeValue.max = String(setting.max);
+    size.value = sizeValue.value = String(s[setting.key]);
+    $('reveal-group').hidden = s.tool !== 'reveal';
+    revealMode.value = s.revealMode;
     $('texture-group').hidden = s.tool !== 'texture';
     $('stamp-group').hidden = s.tool !== 'stamp';
     tol.value = String(s.tolerance);
@@ -240,7 +256,7 @@ function buildTopbar(app: App, files: FileActions): void {
     syncCompass();
     syncLabel();
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
-    $('size-label').textContent = ['brush', 'eraser', 'texture', 'stamp'].includes(s.tool) ? 'Size' : 'Width';
+    $('size-label').textContent = ['brush', 'eraser', 'texture', 'stamp', 'reveal'].includes(s.tool) ? 'Size' : 'Width';
     $('shape-group').hidden = !FILLABLE_TOOLS.includes(s.tool);
     $('tolerance-group').hidden = s.tool !== 'fill';
   };
@@ -372,7 +388,12 @@ function buildLayers(app: App): void {
 }
 
 function buildPaper(app: App): void {
-  const boxes = { paperGrain: $<HTMLInputElement>('paper-grain'), agedEdges: $<HTMLInputElement>('aged-edges'), sepia: $<HTMLInputElement>('sepia') };
+  const boxes = {
+    paperGrain: $<HTMLInputElement>('paper-grain'),
+    agedEdges: $<HTMLInputElement>('aged-edges'),
+    sepia: $<HTMLInputElement>('sepia'),
+    fog: $<HTMLInputElement>('fog'),
+  };
   for (const [key, box] of Object.entries(boxes) as [keyof typeof boxes, HTMLInputElement][]) {
     box.addEventListener('change', () => app.update({ [key]: box.checked }));
   }
@@ -478,6 +499,7 @@ function bindShortcuts(app: App, files: FileActions): void {
     x: 'texture',
     c: 'compass',
     m: 'ruler',
+    f: 'reveal',
     s: 'stamp',
     t: 'text',
     v: 'select',
@@ -511,8 +533,8 @@ function bindShortcuts(app: App, files: FileActions): void {
     else if (toolKeys[key]) app.update({ tool: toolKeys[key] });
     else if (key === '[' || key === ']') {
       const sign = key === ']' ? 1 : -1;
-      if (isGlyphTool(app)) app.update({ glyphSize: app.state.glyphSize + sign * stepFor(app.state.glyphSize) });
-      else app.update({ size: app.state.size + sign * stepFor(app.state.size) });
+      const { key: k } = sizeSetting(app);
+      app.update({ [k]: app.state[k] + sign * stepFor(app.state[k]) });
     }
     else if (key === '=' || key === '+') app.zoomBy(1.5);
     else if (key === '-' || key === '_') app.zoomBy(1 / 1.5);

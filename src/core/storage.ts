@@ -2,6 +2,7 @@ import type { App, AppState } from '../app';
 import { DEFAULT_STATE } from '../app';
 import type { Compass } from './compass';
 import type { Label } from './labels';
+import type { TileLayer } from './layer';
 import { isLayerId, type LayerId, type LayerStackState } from './layers';
 
 const DB_NAME = 'mapper';
@@ -21,17 +22,21 @@ export interface SavedMeta {
   compass?: Compass | null;
 }
 
-/**
- * Tile records are keyed `layerId/tx,ty`. Saves from before layers existed
- * used a bare `tx,ty`; those load into the Biomes layer and are rewritten.
- */
-const recordKey = (layer: LayerId, tileKey: string) => `${layer}/${tileKey}`;
+/** A paint layer, or the fog of war mask. */
+type TileSource = LayerId | 'fog';
 
-function parseRecordKey(key: string): { layer: LayerId; tileKey: string; legacy: boolean } | null {
+/**
+ * Tile records are keyed `layerId/tx,ty` (`fog/tx,ty` for the fog mask).
+ * Saves from before layers existed used a bare `tx,ty`; those load into the
+ * Biomes layer and are rewritten.
+ */
+const recordKey = (layer: TileSource, tileKey: string) => `${layer}/${tileKey}`;
+
+function parseRecordKey(key: string): { layer: TileSource; tileKey: string; legacy: boolean } | null {
   const slash = key.indexOf('/');
   if (slash < 0) return { layer: 'biomes', tileKey: key, legacy: true };
   const layer = key.slice(0, slash);
-  return isLayerId(layer) ? { layer, tileKey: key.slice(slash + 1), legacy: false } : null;
+  return isLayerId(layer) || layer === 'fog' ? { layer, tileKey: key.slice(slash + 1), legacy: false } : null;
 }
 
 export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -89,6 +94,10 @@ export class Autosave {
     app.layers.onChange(() => this.markMeta());
     app.labels.onChange(() => this.markMeta());
     app.compass.onChange(() => this.markMeta());
+    app.fog.onChange((key) => {
+      this.dirtyTiles.add(recordKey('fog', key));
+      this.schedule();
+    });
     app.onState(() => this.markMeta());
     app.onView(() => this.markMeta());
     window.addEventListener('pagehide', () => void this.flush());
@@ -122,7 +131,7 @@ export class Autosave {
           if (!parsed) return;
           const [tx, ty] = parsed.tileKey.split(',').map(Number);
           const bitmap = await createImageBitmap(blobs[i]);
-          this.app.layers.get(parsed.layer).tiles.getOrCreate(tx, ty).ctx.drawImage(bitmap, 0, 0);
+          this.tiles(parsed.layer).getOrCreate(tx, ty).ctx.drawImage(bitmap, 0, 0);
           bitmap.close();
           if (parsed.legacy) {
             this.legacyKeys.add(String(key));
@@ -164,6 +173,7 @@ export class Autosave {
     for (const layer of this.app.layers.all) {
       for (const tile of layer.tiles.values()) this.dirtyTiles.add(recordKey(layer.id, tile.key));
     }
+    for (const tile of this.app.fog.values()) this.dirtyTiles.add(recordKey('fog', tile.key));
     this.metaDirty = true;
     await this.flush();
   }
@@ -198,7 +208,7 @@ export class Autosave {
       const blobs = await Promise.all(
         keys.map(async (key) => {
           const parsed = parseRecordKey(key)!;
-          const tile = this.app.layers.get(parsed.layer).tiles.getByKey(parsed.tileKey);
+          const tile = this.tiles(parsed.layer).getByKey(parsed.tileKey);
           return [key, tile ? await toBlob(tile.canvas) : null] as const;
         }),
       );
@@ -232,6 +242,10 @@ export class Autosave {
       labels: this.app.labels.all(),
       compass: this.app.compass.get(),
     };
+  }
+
+  private tiles(source: TileSource): TileLayer {
+    return source === 'fog' ? this.app.fog : this.app.layers.get(source).tiles;
   }
 
   private getDb(): Promise<IDBDatabase> {

@@ -55,6 +55,12 @@
           <button type="button" id="ruler-keep" class="text-btn" title="Paint the measured line on the active layer with a length label (Enter)">Draw on map</button>
           <span class="unit">Shift snaps to 45°, Esc clears</span>
         </div>
+        <div class="group" id="reveal-group">
+          <select id="reveal-mode" title="Reveal explored land, or fog it again">
+            <option value="reveal">Reveal</option>
+            <option value="hide">Hide again</option>
+          </select>
+        </div>
         <div class="group" id="label-group">
           <span id="label-target" class="unit"></span>
           <label for="label-size">Size</label>
@@ -100,6 +106,7 @@
           <label><input type="checkbox" id="paper-grain" /> Parchment grain</label>
           <label><input type="checkbox" id="aged-edges" /> Aged edges</label>
           <label><input type="checkbox" id="sepia" /> Sepia ink</label>
+          <label title="Cover land you haven't revealed yet (use the Reveal tool, F)"><input type="checkbox" id="fog" /> Fog of war</label>
         </div>
         <h2>Color</h2>
         <div class="current">
@@ -125,6 +132,7 @@
             <dt>Stamps</dt><dd>S places one symbol per click</dd>
             <dt>Compass</dt><dd>C, then click to place or drag it</dd>
             <dt>Ruler</dt><dd>M, then drag to measure</dd>
+            <dt>Fog of war</dt><dd>F reveals explored land</dd>
             <dt>Labels</dt><dd>T to type, V to select; drag to move, Delete removes</dd>
             <dt>Pick color</dt><dd>Alt + click</dd>
             <dt>Brush size</dt><dd>[ and ]</dd>

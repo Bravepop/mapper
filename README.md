@@ -2,7 +2,7 @@
 
 A paint-style map maker for Valheim's immersive mode (no in-game map). Draw your world as you explore it, on a meter grid centered on the spawn stones.
 
-See [PLAN.md](PLAN.md) for the full roadmap. Phases 1 (drawing MVP) and 2 (hand-made map tools) are implemented.
+See [PLAN.md](PLAN.md) for the full roadmap. Phases 1 (drawing MVP), 2 (hand-made map tools) and 3 (Valheim markers, fog of war) are implemented.
 
 ## Run it
 
@@ -29,6 +29,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 | Snap to 45°, square, circle | Hold Shift while drawing a shape |
 | Finish / cancel a polyline | Double-click or `Enter` / `Esc` (`Backspace` removes the last point) |
 | Texture brush / Stamp / Compass rose | `X` / `S` / `C` |
+| Reveal (fog of war) | `F` |
 | Ruler | `M` (Shift snaps to 45°, `Enter` draws it on the map, `Esc` clears) |
 | Text / Select | `T` / `V` |
 | Edit a label's text | Click it with Text, or double-click it (or `Enter`) with Select |
@@ -52,6 +53,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 - **Compass rose:** with the **Compass** tool, click to place the map's compass rose, or drag it to move it. Choose **Ornate** or **Simple** and a size in meters. While the tool is active, the color palette recolors it. `Delete` or **Remove** takes it off. North always points up.
 - **Paper:** the sidebar toggles **Parchment grain** (stains and fibers over the whole map), **Aged edges** (darker rim and corners) and **Sepia ink** (fades paint and labels to brown ink). These only change how the map looks and are saved with it.
 - **Ruler:** drag to measure a distance. It shows meters and how many grid cells that is. The measurement is only on screen and nothing is added to the map, unless you press **Draw on map** (or `Enter`). That paints the line in the current color, width and line style on the active layer and adds a label with its length, as one undo step.
+- **Fog of war** (optional): tick **Fog of war** in the Paper panel to cover everything you haven't revealed with hatched parchment. Use the **Reveal** tool to paint explored land clear (Size sets the brush), or switch it to **Hide again** to fog an area back over. The fog is a separate mask, so revealing never changes your drawing. It undoes and saves like everything else.
 - **Labels:** with the **Text** tool, click the map and type a place name (Enter to keep it, Esc to cancel). Labels use the Uncial Antiqua map font, which is bundled with the app, so it works offline. They're kept as editable text, not paint: use **Select** to drag them around, and with a label selected the **Size** (meters, so labels scale with the map), **Rotate** and **Curve** controls and the color palette restyle it. Curve bends the text along an arc. With no label selected, those controls set the style for new labels. A label belongs to the layer that was active when you made it, so it hides, locks and fades with that layer. Fill and the eyedropper ignore labels.
 - **Fill** only spreads across the part of the map you can see, up to 1 km from the click, so filling an open area doesn't flood the whole world. Raise **Tolerance** to fill across slight color differences. By default fill stops at lines on the layer you're painting; switch it to *all visible layers* to fill a biome right up to coastlines you drew on Ink.
 - **Autosave:** your map is saved in the browser about a second after each change and restored when you reopen the page. Use **Save** to keep a `.vmap` file as a real backup, since clearing browser data wipes the autosave.
@@ -62,8 +64,8 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 src/
   app.ts            app state, input handling (pan/zoom/tool dispatch)
   core/             camera, layer stack and tiled raster layers, labels, undo history, painting, autosave, .vmap file I/O
-  render/           renderer, adaptive grid, labels, compass rose, paper effects
-  tools/            pencil/brush/eraser (stroke.ts), shapes, texture brush, stamps, compass, ruler, fill, eyedropper, text/select (label.ts)
+  render/           renderer, adaptive grid, labels, compass rose, paper effects, fog
+  tools/            pencil/brush/eraser (stroke.ts), shapes, texture brush, stamps, compass, ruler, reveal (fog), fill, eyedropper, text/select (label.ts)
   ui/               toolbar, palette, status bar, shortcuts
   valheim/          biome colors, ink symbols and texture patterns (glyphs.ts)
 ```
