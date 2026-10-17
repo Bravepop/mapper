@@ -87,10 +87,12 @@ export class History {
     return new Edit(this.target());
   }
 
-  commit(edit: Edit): void {
+  /** Finish an edit as one undo step, optionally together with label changes (applied now). */
+  commit(edit: Edit, ...labels: LabelChange[]): void {
     const patches = edit.finish();
-    if (patches.length === 0) return;
-    this.push({ patches, labels: [] });
+    for (const c of labels) this.labels.apply(c, 'after');
+    if (patches.length === 0 && labels.length === 0) return;
+    this.push({ patches, labels });
   }
 
   /** Apply label changes and record them as one undo step. */

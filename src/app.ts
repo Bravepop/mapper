@@ -8,6 +8,7 @@ import { CompassTool } from './tools/compass';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
 import { LabelEditor, LabelTool } from './tools/label';
+import { RulerTool } from './tools/ruler';
 import { ShapeTool } from './tools/shape';
 import { StampTool } from './tools/stamp';
 import { TextureTool } from './tools/texture';
@@ -131,6 +132,7 @@ export class App {
       texture: new TextureTool(this),
       stamp: new StampTool(this),
       compass: new CompassTool(this),
+      ruler: new RulerTool(this),
       text: new LabelTool(this, 'text', labelEditor),
       select: new LabelTool(this, 'select', labelEditor),
     };

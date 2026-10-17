@@ -8,6 +8,7 @@ import { effectiveGrid, formatEW, formatNS, GRID_SIZES } from '../render/grid';
 import type { ToolId } from '../tools/tool';
 import { BIOMES, INKS, type Swatch } from '../valheim/biomes';
 import { drawGlyph, seededRandom, STAMPS, TEXTURES, type GlyphId } from '../valheim/glyphs';
+import type { RulerTool } from '../tools/ruler';
 import { ICONS } from './icons';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -25,16 +26,17 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
   { id: 'texture', label: 'Texture brush', key: 'X', hint: 'Paint forests, swamps, mountains, waves or stipple', group: true },
   { id: 'stamp', label: 'Stamp', key: 'S', hint: 'Click to place a map symbol' },
   { id: 'compass', label: 'Compass rose', key: 'C', hint: 'Click to place the compass rose, drag to move it' },
+  { id: 'ruler', label: 'Ruler', key: 'M', hint: 'Drag to measure a distance', group: true },
   { id: 'text', label: 'Text', key: 'T', hint: 'Click the map to add a label, or click a label to edit it', group: true },
   { id: 'select', label: 'Select', key: 'V', hint: 'Select a label to move, restyle or delete it (double-click to edit)' },
 ];
 
-const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse', 'texture', 'stamp'];
+const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse', 'texture', 'stamp', 'ruler'];
 /** Tools whose Size is the symbol height (glyphSize) rather than the brush/line width. */
 const GLYPH_TOOLS: ToolId[] = ['texture', 'stamp'];
 const isGlyphTool = (app: App) => GLYPH_TOOLS.includes(app.state.tool);
 const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
-const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse'];
+const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse', 'ruler'];
 const FREEHAND_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser'];
 const LABEL_TOOLS: ToolId[] = ['text', 'select'];
 
@@ -193,6 +195,13 @@ function buildTopbar(app: App, files: FileActions): void {
   };
   app.compass.onChange(syncCompass);
 
+  const ruler = app.tools.ruler as RulerTool;
+  const rulerKeep = $<HTMLButtonElement>('ruler-keep');
+  rulerKeep.addEventListener('click', () => ruler.keep());
+  const syncRuler = () => (rulerKeep.disabled = !ruler.measurement);
+  ruler.onChange(syncRuler);
+  syncRuler();
+
   const shapeFill = $<HTMLInputElement>('shape-fill');
   shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
 
@@ -223,6 +232,7 @@ function buildTopbar(app: App, files: FileActions): void {
     $('smoothing-group').hidden = !FREEHAND_TOOLS.includes(s.tool);
     $('label-group').hidden = !LABEL_TOOLS.includes(s.tool);
     $('compass-group').hidden = s.tool !== 'compass';
+    $('ruler-group').hidden = s.tool !== 'ruler';
     syncCompass();
     syncLabel();
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
@@ -462,6 +472,7 @@ function bindShortcuts(app: App, files: FileActions): void {
     o: 'ellipse',
     x: 'texture',
     c: 'compass',
+    m: 'ruler',
     s: 'stamp',
     t: 'text',
     v: 'select',

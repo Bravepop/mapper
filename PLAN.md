@@ -56,7 +56,7 @@ Runs on a second monitor or alt-tab while playing.
 - [x] Autosave to IndexedDB, plus manual Save/Load to a `.vmap` file
 - [x] Keyboard shortcuts (B brush, E eraser, G fill, etc. like Paint/Photoshop)
 
-### Phase 2: Hand-made map tools
+### Phase 2: Hand-made map tools (done)
 Built in this order:
 1. [x] **Layers:** Biomes · Paths · Ink/Outlines · Notes.
    - A layers panel to show/hide, lock, set opacity and reorder each layer. Painting goes to the active layer.
@@ -71,7 +71,7 @@ Built in this order:
 5. [x] **Texture brushes:** paintable patterns such as trees (forest), tufts (swamp), peaks (mountain), waves (ocean) and stipple.
 6. [x] **Stamps:** hand-drawn style symbols you place yourself: tree, rock, cave, tower, camp, ship, skull, and so on.
 7. [x] **Paper look:** parchment texture, aged-edge vignette, optional ink/sepia style, and a compass rose you place and style.
-8. [ ] **Simple ruler:** drag to read a length against the grid. Nothing is kept on the map unless you choose to.
+8. [x] **Simple ruler:** drag to read a length against the grid. Nothing is kept on the map unless you choose to.
 
 ### Phase 3: Markers and Valheim flavor
 - [ ] Valheim icon stamps you place and label yourself: Portal, Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker. They're ordinary hand-placed stamps with a text label, not smart objects
@@ -139,4 +139,4 @@ This gives you a useful terrain picture without fake precision, and the data mod
 
 ## 8. Next Step
 
-Phase 2, starting with layers (step 1), then shapes.
+Phase 3: Valheim icon stamps you label yourself, then optional fog of war.
