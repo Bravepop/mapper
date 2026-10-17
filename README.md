@@ -2,7 +2,7 @@
 
 A paint-style map maker for Valheim's immersive mode (no in-game map). Draw your world as you explore it, on a meter grid centered on the spawn stones.
 
-See [PLAN.md](PLAN.md) for the full roadmap. Phase 1 (drawing MVP) is implemented.
+See [PLAN.md](PLAN.md) for the full roadmap. Phase 1 (drawing MVP) is implemented; Phase 2 (hand-made map tools) is in progress.
 
 ## Run it
 
@@ -34,7 +34,8 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 
 - **Scale:** 1 pixel of paint is 1 meter. The status bar shows where the cursor is (meters E/W and N/S of spawn) and its distance from spawn. A scale bar sits in the bottom-left corner.
 - **Grid:** pick a cell size from 1 to 500 m. When you zoom out, the grid switches to coarser steps so the lines don't blur together.
-- **Fill** only spreads across the part of the map you can see, up to 1 km from the click, so filling an open area doesn't flood the whole world. Raise **Tolerance** to fill across slight color differences.
+- **Layers:** the map has four layers: Biomes, Paths, Ink / Outlines and Notes. You always paint on the highlighted layer; click a layer's name to switch. Each layer can be hidden (eye), locked (padlock), faded with its opacity slider, or moved up and down. Locked and hidden layers can't be painted on.
+- **Fill** only spreads across the part of the map you can see, up to 1 km from the click, so filling an open area doesn't flood the whole world. Raise **Tolerance** to fill across slight color differences. By default fill stops at lines on the layer you're painting; switch it to *all visible layers* to fill a biome right up to coastlines you drew on Ink.
 - **Autosave:** your map is saved in the browser about a second after each change and restored when you reopen the page. Use **Save** to keep a `.vmap` file as a real backup, since clearing browser data wipes the autosave.
 
 ## Code layout
@@ -42,7 +43,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 ```
 src/
   app.ts            app state, input handling (pan/zoom/tool dispatch)
-  core/             camera, tiled raster layer, undo history, painting, autosave, .vmap file I/O
+  core/             camera, layer stack and tiled raster layers, undo history, painting, autosave, .vmap file I/O
   render/           renderer and adaptive grid
   tools/            pencil/brush/eraser (stroke.ts), fill, eyedropper
   ui/               toolbar, palette, status bar, shortcuts

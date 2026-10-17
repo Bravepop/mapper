@@ -9,14 +9,24 @@ export class EyedropperTool implements Tool {
 
   constructor(private app: App) {}
 
-  /** Pick the painted color under the pointer. Unpainted parchment is ignored. */
+  /**
+   * Pick the painted color under the pointer from the topmost visible layer
+   * that has paint there. Unpainted parchment is ignored.
+   */
   pick(e: ToolEvent): void {
     const px = Math.floor(e.wx);
     const py = Math.floor(e.wy);
-    const tile = this.app.layer.get(tileIndex(px), tileIndex(py));
-    if (!tile) return;
-    const [r, g, b, a] = tile.ctx.getImageData(px - tile.tx * TILE_SIZE, py - tile.ty * TILE_SIZE, 1, 1).data;
-    if (a > 0) this.app.update({ color: rgbToHex(r, g, b) });
+    const layers = this.app.layers.all;
+    for (let i = layers.length - 1; i >= 0; i--) {
+      if (!layers[i].visible) continue;
+      const tile = layers[i].tiles.get(tileIndex(px), tileIndex(py));
+      if (!tile) continue;
+      const [r, g, b, a] = tile.ctx.getImageData(px - tile.tx * TILE_SIZE, py - tile.ty * TILE_SIZE, 1, 1).data;
+      if (a > 0) {
+        this.app.update({ color: rgbToHex(r, g, b) });
+        return;
+      }
+    }
   }
 
   onDown(e: ToolEvent): void {

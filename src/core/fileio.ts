@@ -1,20 +1,31 @@
 import { DEFAULT_STATE, type App, type AppState } from '../app';
 import { isTileEmpty } from './layer';
+import { isLayerId, type LayerId, type LayerProps } from './layers';
 import type { Autosave } from './storage';
 
-/** On-disk `.vmap` format: JSON with one PNG per painted tile. */
+interface VmapTile {
+  x: number;
+  y: number;
+  png: string;
+}
+
+/**
+ * On-disk `.vmap` format: JSON with one PNG per painted tile.
+ * Version 2 stores every layer, bottom to top, with its settings.
+ * Version 1 had a single layer; it loads into Biomes.
+ */
 interface VmapFile {
   format: 'vmap';
-  version: 1;
+  version: 1 | 2;
   savedAt: string;
   camera: { x: number; y: number; zoom: number };
   settings: Pick<AppState, 'gridSize' | 'showGrid'>;
-  layers: {
-    id: string;
-    name: string;
-    tiles: { x: number; y: number; png: string }[];
-  }[];
+  /** v2 only. */
+  activeLayer?: LayerId;
+  layers: (Partial<LayerProps> & { id: string; name: string; tiles: VmapTile[] })[];
 }
+
+const FILE_VERSION = 2;
 
 const PICKER_TYPES = [{ description: 'Valheim map', accept: { 'application/json': ['.vmap'] } }];
 
@@ -28,7 +39,7 @@ export class FileActions {
     private app: App,
     private autosave: Autosave,
   ) {
-    app.layer.onChange(() => this.setModified(true));
+    app.layers.onTiles(() => this.setModified(true));
   }
 
   get fileName(): string | null {
@@ -40,7 +51,7 @@ export class FileActions {
   }
 
   async newMap(): Promise<void> {
-    if (this.app.layer.size > 0 && !confirm('Start a new, empty map?\n\nThe current map will be cleared. Save it first (Ctrl+S) if you want to keep it.')) return;
+    if (this.app.layers.tileCount > 0 && !confirm('Start a new, empty map?\n\nThe current map will be cleared. Save it first (Ctrl+S) if you want to keep it.')) return;
     this.app.resetDocument();
     this.app.camera.centerOn(0, 0);
     this.app.camera.zoom = DEFAULT_ZOOM;
@@ -80,7 +91,7 @@ export class FileActions {
   }
 
   async open(): Promise<void> {
-    if (this.modified && this.app.layer.size > 0 && !confirm('Open another map?\n\nUnsaved changes to the current map will be lost.')) return;
+    if (this.modified && this.app.layers.tileCount > 0 && !confirm('Open another map?\n\nUnsaved changes to the current map will be lost.')) return;
     try {
       let file: File;
       let handle: FileSystemFileHandle | null = null;
@@ -103,41 +114,58 @@ export class FileActions {
   }
 
   private serialize(): string {
-    const tiles = [];
-    for (const tile of this.app.layer.values()) {
-      if (isTileEmpty(tile)) continue;
-      tiles.push({ x: tile.tx, y: tile.ty, png: tile.canvas.toDataURL('image/png') });
-    }
+    const layers = this.app.layers.all.map(({ id, name, visible, locked, opacity, tiles }) => {
+      const out: VmapTile[] = [];
+      for (const tile of tiles.values()) {
+        if (isTileEmpty(tile)) continue;
+        out.push({ x: tile.tx, y: tile.ty, png: tile.canvas.toDataURL('image/png') });
+      }
+      return { id, name, visible, locked, opacity, tiles: out };
+    });
     const { x, y, zoom } = this.app.camera;
     const file: VmapFile = {
       format: 'vmap',
-      version: 1,
+      version: FILE_VERSION,
       savedAt: new Date().toISOString(),
       camera: { x, y, zoom },
       settings: { gridSize: this.app.state.gridSize, showGrid: this.app.state.showGrid },
-      layers: [{ id: 'terrain', name: 'Terrain', tiles }],
+      activeLayer: this.app.activeLayer.id,
+      layers,
     };
     return JSON.stringify(file);
   }
 
   private async load(text: string): Promise<void> {
     const file = JSON.parse(text) as VmapFile;
-    if (file.format !== 'vmap' || file.version !== 1 || !Array.isArray(file.layers)) {
-      throw new Error('This is not a Mapper .vmap file (or it was made by a newer version).');
+    if (file?.format !== 'vmap' || !Array.isArray(file.layers)) throw new Error('This is not a Mapper .vmap file.');
+    if (file.version !== 1 && file.version !== 2) {
+      throw new Error('This map was made by a newer version of Mapper.');
     }
+    // v1 had one layer of paint, which becomes Biomes. v2 layers match by id; unknown ones are skipped.
+    const layers =
+      file.version === 1
+        ? [{ id: 'biomes' as LayerId, tiles: file.layers[0]?.tiles ?? [] }]
+        : file.layers.flatMap((l) => (isLayerId(l.id) ? [{ ...l, id: l.id }] : []));
+
     // Decode everything first so a bad file doesn't leave a half-cleared map.
-    const tiles = file.layers[0]?.tiles ?? [];
     const images = await Promise.all(
-      tiles.map(async (t) => {
-        const img = new Image();
-        img.src = t.png;
-        await img.decode();
-        return { ...t, img };
-      }),
+      layers.flatMap((l) =>
+        // createImageBitmap rather than img.decode(): decode() never settles while the page isn't rendering.
+        (l.tiles ?? []).map(async (t) => {
+          const img = await createImageBitmap(await (await fetch(t.png)).blob());
+          return { layer: l.id, x: t.x, y: t.y, img };
+        }),
+      ),
     );
 
     this.app.resetDocument();
-    for (const t of images) this.app.layer.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
+    if (file.version === 2) {
+      this.app.layers.restore({ layers: layers as LayerProps[], active: file.activeLayer ?? 'biomes' });
+    }
+    for (const t of images) {
+      this.app.layers.get(t.layer).tiles.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
+      t.img.close();
+    }
     Object.assign(this.app.camera, file.camera);
     this.app.update({
       gridSize: file.settings?.gridSize ?? DEFAULT_STATE.gridSize,

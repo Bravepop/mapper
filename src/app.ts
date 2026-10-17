@@ -1,6 +1,6 @@
 import { Camera } from './core/camera';
 import { History } from './core/history';
-import { TileLayer } from './core/layer';
+import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
@@ -14,6 +14,8 @@ export interface AppState {
   size: number;
   /** Fill bucket color tolerance, 0–255 per channel. */
   tolerance: number;
+  /** What the fill bucket treats as boundaries: the active layer only, or every visible layer. */
+  fillSample: 'layer' | 'visible';
   /** Grid cell size in meters. */
   gridSize: number;
   showGrid: boolean;
@@ -24,6 +26,7 @@ export const DEFAULT_STATE: AppState = {
   color: '#7fa650',
   size: 8,
   tolerance: 32,
+  fillSample: 'layer',
   gridSize: 25,
   showGrid: true,
 };
@@ -33,8 +36,8 @@ export const MAX_SIZE = 200;
 
 export class App {
   readonly camera = new Camera();
-  readonly layer = new TileLayer();
-  readonly history = new History(this.layer);
+  readonly layers = new LayerStack();
+  readonly history = new History(() => this.layers.active.tiles);
   readonly renderer: Renderer;
   readonly tools: { [K in ToolId]: Tool };
   readonly eyedropper: EyedropperTool;
@@ -43,6 +46,7 @@ export class App {
   cursor: Cursor | null = null;
 
   private stateListeners = new Set<() => void>();
+  private noticeListeners = new Set<(msg: string) => void>();
   private viewListeners = new Set<() => void>();
   private pan: { id: number; x: number; y: number } | null = null;
   private drawingId: number | null = null;
@@ -58,7 +62,8 @@ export class App {
       fill: new FillTool(this),
       eyedropper: this.eyedropper,
     };
-    this.layer.onChange(() => this.requestRender());
+    this.layers.onTiles(() => this.requestRender());
+    this.layers.onChange(() => this.requestRender());
     this.bindInput();
 
     const stage = canvas.parentElement!;
@@ -67,6 +72,30 @@ export class App {
 
   get tool(): Tool {
     return this.tools[this.state.tool];
+  }
+
+  get activeLayer(): MapLayer {
+    return this.layers.active;
+  }
+
+  /**
+   * Tools call this before editing. Locked or hidden layers can't be painted
+   * on; the user gets a short notice explaining why.
+   */
+  canPaint(): boolean {
+    const layer = this.activeLayer;
+    if (layer.locked) this.notice(`“${layer.name}” is locked. Unlock it in the Layers panel to paint on it.`);
+    else if (!layer.visible) this.notice(`“${layer.name}” is hidden. Show it in the Layers panel to paint on it.`);
+    else return true;
+    return false;
+  }
+
+  notice(msg: string): void {
+    for (const fn of this.noticeListeners) fn(msg);
+  }
+
+  onNotice(fn: (msg: string) => void): void {
+    this.noticeListeners.add(fn);
   }
 
   get isPanning(): boolean {
@@ -123,7 +152,7 @@ export class App {
 
   /** Wipe the map (used by New and before loading a file). */
   resetDocument(): void {
-    this.layer.clear();
+    this.layers.reset();
     this.history.clear();
     this.requestRender();
   }

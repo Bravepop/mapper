@@ -26,6 +26,7 @@ export class StrokeTool implements Tool {
   }
 
   onDown(e: ToolEvent): void {
+    if (!this.app.canPaint()) return;
     this.edit = this.app.history.begin();
     if (e.shiftKey && this.last) {
       strokeSegment(this.edit, this.last.x, this.last.y, e.wx, e.wy, this.radius, this.color);

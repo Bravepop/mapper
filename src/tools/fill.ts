@@ -1,5 +1,6 @@
 import type { App } from '../app';
 import { PAINT_LIMIT, TILE_SIZE } from '../core/constants';
+import { tileIndex } from '../core/layer';
 import { hexToRgb } from '../core/paint';
 import { strokeTwoTone, type Cursor, type Tool, type ToolEvent } from './tool';
 
@@ -18,6 +19,10 @@ interface Mask {
  * Paint-bucket fill. The area searched is the visible part of the map (capped
  * at MAX_REACH from the click), so filling an open, unpainted area stops at the
  * screen edge instead of flooding the whole world.
+ *
+ * Boundaries come from the active layer, or from every visible layer when
+ * `fillSample` is 'visible' (e.g. fill a biome on Biomes up to coastlines drawn
+ * on Ink). Either way, only the active layer is painted.
  */
 export class FillTool implements Tool {
   readonly id = 'fill';
@@ -25,7 +30,10 @@ export class FillTool implements Tool {
   constructor(private app: App) {}
 
   onDown(e: ToolEvent): void {
-    const { camera, layer, history, state } = this.app;
+    if (!this.app.canPaint()) return;
+    const { camera, history, state } = this.app;
+    const active = this.app.activeLayer;
+    const sources = state.fillSample === 'visible' ? this.app.layers.all.filter((l) => l.visible) : [active];
     const px = Math.floor(e.wx);
     const py = Math.floor(e.wy);
     const view = camera.visibleRect();
@@ -37,7 +45,7 @@ export class FillTool implements Tool {
     const w = x1 - x0;
     const h = y1 - y0;
 
-    // Composite the existing tiles into one region image.
+    // Composite the boundary layers' tiles into one region image, at full opacity.
     const region = document.createElement('canvas');
     region.width = w;
     region.height = h;
@@ -46,17 +54,23 @@ export class FillTool implements Tool {
     const tx1 = Math.floor((x1 - 1) / TILE_SIZE);
     const ty0 = Math.floor(y0 / TILE_SIZE);
     const ty1 = Math.floor((y1 - 1) / TILE_SIZE);
-    for (let ty = ty0; ty <= ty1; ty++) {
-      for (let tx = tx0; tx <= tx1; tx++) {
-        const tile = layer.get(tx, ty);
-        if (tile) rctx.drawImage(tile.canvas, tx * TILE_SIZE - x0, ty * TILE_SIZE - y0);
+    for (const layer of sources) {
+      for (let ty = ty0; ty <= ty1; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+          const tile = layer.tiles.get(tx, ty);
+          if (tile) rctx.drawImage(tile.canvas, tx * TILE_SIZE - x0, ty * TILE_SIZE - y0);
+        }
       }
     }
     const pixels = rctx.getImageData(0, 0, w, h).data;
     const [fr, fg, fb] = hexToRgb(state.color);
 
-    const start = ((py - y0) * w + (px - x0)) * 4;
-    if (pixels[start + 3] === 255 && pixels[start] === fr && pixels[start + 1] === fg && pixels[start + 2] === fb) return;
+    // Nothing to do if the active layer already has the fill color here.
+    const startTile = active.tiles.get(tileIndex(px), tileIndex(py));
+    if (startTile) {
+      const [r, g, b, a] = startTile.ctx.getImageData(px - startTile.tx * TILE_SIZE, py - startTile.ty * TILE_SIZE, 1, 1).data;
+      if (a === 255 && r === fr && g === fg && b === fb) return;
+    }
 
     const m = floodMask(pixels, w, h, px - x0, py - y0, state.tolerance);
 

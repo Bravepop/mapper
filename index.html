@@ -22,6 +22,10 @@
           <label for="tolerance">Tolerance</label>
           <input type="range" id="tolerance" min="0" max="128" />
           <span id="tolerance-value" class="unit"></span>
+          <select id="fill-sample" title="What the fill stops at">
+            <option value="layer">Stop at lines on this layer</option>
+            <option value="visible">Stop at lines on all visible layers</option>
+          </select>
         </div>
         <div class="spacer"></div>
         <div class="group">
@@ -35,9 +39,13 @@
 
       <main id="stage">
         <canvas id="map" tabindex="0" aria-label="Map canvas"></canvas>
+        <div id="notice" role="status" aria-live="polite" hidden></div>
       </main>
 
       <aside id="palette">
+        <h2 class="first">Layers</h2>
+        <ul id="layers" class="layers" aria-label="Layers, top to bottom"></ul>
+        <h2>Color</h2>
         <div class="current">
           <input type="color" id="current-color" title="Pick any color" />
           <div>

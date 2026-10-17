@@ -19,7 +19,9 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string }[] = [
 export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
   buildToolbar(app);
   buildTopbar(app, files);
+  buildLayers(app);
   buildPalette(app);
+  buildNotice(app);
   buildStatus(app, files, autosave);
   bindShortcuts(app, files);
 }
@@ -81,6 +83,8 @@ function buildTopbar(app: App, files: FileActions): void {
   const tol = $<HTMLInputElement>('tolerance');
   const tolValue = $('tolerance-value');
   tol.addEventListener('input', () => app.update({ tolerance: Number(tol.value) }));
+  const fillSample = $<HTMLSelectElement>('fill-sample');
+  fillSample.addEventListener('change', () => app.update({ fillSample: fillSample.value as 'layer' | 'visible' }));
 
   const grid = $<HTMLSelectElement>('grid-size');
   grid.innerHTML = GRID_SIZES.map((g) => `<option value="${g}">${g} m</option>`).join('');
@@ -93,6 +97,7 @@ function buildTopbar(app: App, files: FileActions): void {
     size.value = sizeValue.value = String(s.size);
     tol.value = String(s.tolerance);
     tolValue.textContent = String(s.tolerance);
+    fillSample.value = s.fillSample;
     grid.value = String(s.gridSize);
     showGrid.checked = s.showGrid;
     $('size-group').hidden = !['brush', 'eraser'].includes(s.tool);
@@ -100,6 +105,84 @@ function buildTopbar(app: App, files: FileActions): void {
   };
   app.onState(sync);
   sync();
+}
+
+function buildLayers(app: App): void {
+  const list = $('layers');
+  const { layers } = app;
+
+  const render = () => {
+    list.replaceChildren();
+    // Top layer first, like most paint programs.
+    const ordered = [...layers.all].reverse();
+    ordered.forEach((layer, i) => {
+      const li = document.createElement('li');
+      li.className = 'layer';
+      li.classList.toggle('active', layer.id === layers.active.id);
+      li.classList.toggle('hidden', !layer.visible);
+      li.dataset.layer = layer.id;
+
+      const eye = iconButton(layer.visible ? ICONS.eye : ICONS.eyeOff, layer.visible ? 'Hide layer' : 'Show layer', () =>
+        layers.set(layer.id, { visible: !layer.visible }),
+      );
+      eye.classList.add('small');
+      eye.setAttribute('aria-pressed', String(layer.visible));
+      const lock = iconButton(layer.locked ? ICONS.lock : ICONS.unlock, layer.locked ? 'Unlock layer' : 'Lock layer', () =>
+        layers.set(layer.id, { locked: !layer.locked }),
+      );
+      lock.classList.add('small');
+      lock.classList.toggle('on', layer.locked);
+      lock.setAttribute('aria-pressed', String(layer.locked));
+
+      const name = document.createElement('button');
+      name.className = 'layer-name';
+      name.textContent = layer.name;
+      name.title = 'Paint on this layer';
+      name.addEventListener('click', () => layers.setActive(layer.id));
+
+      const up = iconButton(ICONS.up, 'Move layer up', () => layers.move(layer.id, 1));
+      up.classList.add('small');
+      up.disabled = i === 0;
+      const down = iconButton(ICONS.down, 'Move layer down', () => layers.move(layer.id, -1));
+      down.classList.add('small');
+      down.disabled = i === ordered.length - 1;
+
+      const opacity = document.createElement('input');
+      opacity.type = 'range';
+      opacity.min = '0';
+      opacity.max = '100';
+      opacity.value = String(Math.round(layer.opacity * 100));
+      opacity.className = 'layer-opacity';
+      opacity.title = `Opacity ${opacity.value}%`;
+      opacity.setAttribute('aria-label', `${layer.name} opacity`);
+      opacity.addEventListener('input', () => {
+        opacity.title = `Opacity ${opacity.value}%`;
+        // Update in place so the slider keeps focus while dragging.
+        layer.opacity = Number(opacity.value) / 100;
+        app.requestRender();
+      });
+      opacity.addEventListener('change', () => layers.set(layer.id, { opacity: Number(opacity.value) / 100 }));
+
+      const row = document.createElement('div');
+      row.className = 'layer-row';
+      row.append(eye, lock, name, up, down);
+      li.append(row, opacity);
+      list.append(li);
+    });
+  };
+  layers.onChange(render);
+  render();
+}
+
+function buildNotice(app: App): void {
+  const el = $('notice');
+  let timer = 0;
+  app.onNotice((msg) => {
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(timer);
+    timer = window.setTimeout(() => (el.hidden = true), 2500);
+  });
 }
 
 function buildPalette(app: App): void {

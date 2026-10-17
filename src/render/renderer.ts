@@ -1,6 +1,6 @@
 import type { App } from '../app';
 import { TILE_SIZE, WORLD_RADIUS } from '../core/constants';
-import type { Tile } from '../core/layer';
+import type { Tile, TileLayer } from '../core/layer';
 import { drawGrid } from './grid';
 
 const OUTSIDE = '#2e2a24';
@@ -53,7 +53,12 @@ export class Renderer {
 
     // Tiles and grid in device pixels so edges line up exactly.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.drawTiles();
+    for (const layer of this.app.layers.all) {
+      if (!layer.visible || layer.opacity <= 0) continue;
+      ctx.globalAlpha = layer.opacity;
+      this.drawTiles(layer.tiles);
+    }
+    ctx.globalAlpha = 1;
     if (state.showGrid) drawGrid(ctx, cam, dpr, state.gridSize);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -63,9 +68,9 @@ export class Renderer {
     this.drawScaleBar();
   }
 
-  private drawTiles(): void {
+  private drawTiles(layer: TileLayer): void {
     const { ctx, dpr } = this;
-    const { camera: cam, layer } = this.app;
+    const cam = this.app.camera;
     ctx.imageSmoothingEnabled = cam.zoom < 1;
     ctx.imageSmoothingQuality = 'high';
 

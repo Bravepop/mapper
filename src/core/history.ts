@@ -2,6 +2,7 @@ import { TILE_SIZE } from './constants';
 import { tileKey, type Tile, type TileLayer } from './layer';
 
 interface Patch {
+  layer: TileLayer;
   tx: number;
   ty: number;
   /** Tile pixels before the edit; null if the tile didn't exist. */
@@ -17,8 +18,9 @@ const MAX_ENTRIES = 100;
 const MAX_BYTES = 256 * 1024 * 1024;
 
 /**
- * One in-progress edit (a brush stroke, a fill). Tools call `touch` before
- * writing to a tile so the tile's original pixels are captured for undo.
+ * One in-progress edit (a brush stroke, a fill) on one layer. Tools call
+ * `touch` before writing to a tile so the tile's original pixels are captured
+ * for undo.
  */
 export class Edit {
   private patches = new Map<string, Patch>();
@@ -31,7 +33,7 @@ export class Edit {
     const existing = this.layer.get(tx, ty);
     if (!this.patches.has(key)) {
       const before = existing ? existing.ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE) : null;
-      this.patches.set(key, { tx, ty, before, after: null });
+      this.patches.set(key, { layer: this.layer, tx, ty, before, after: null });
     }
     return existing ?? this.layer.getOrCreate(tx, ty);
   }
@@ -58,7 +60,8 @@ export class History {
   private redoStack: Entry[] = [];
   private listeners = new Set<() => void>();
 
-  constructor(private layer: TileLayer) {}
+  /** `target` returns the layer new edits paint into (the active layer). */
+  constructor(private target: () => TileLayer) {}
 
   get canUndo(): boolean {
     return this.undoStack.length > 0;
@@ -69,7 +72,7 @@ export class History {
   }
 
   begin(): Edit {
-    return new Edit(this.layer);
+    return new Edit(this.target());
   }
 
   commit(edit: Edit): void {
@@ -111,11 +114,11 @@ export class History {
     for (const p of entry) {
       const data = p[side];
       if (data) {
-        const tile = this.layer.getOrCreate(p.tx, p.ty);
+        const tile = p.layer.getOrCreate(p.tx, p.ty);
         tile.ctx.putImageData(data, 0, 0);
-        this.layer.notify(tile.key);
+        p.layer.notify(tile.key);
       } else {
-        this.layer.remove(p.tx, p.ty);
+        p.layer.remove(p.tx, p.ty);
       }
     }
   }

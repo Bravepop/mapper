@@ -58,7 +58,7 @@ Runs on a second monitor or alt-tab while playing.
 
 ### Phase 2: Hand-made map tools
 Built in this order:
-1. [ ] **Layers:** Biomes · Paths · Ink/Outlines · Notes.
+1. [x] **Layers:** Biomes · Paths · Ink/Outlines · Notes.
    - A layers panel to show/hide, lock, set opacity and reorder each layer. Painting goes to the active layer.
    - Fill reads the active layer by default, with an option to use all visible layers as its boundaries.
    - Undo, autosave and `.vmap` are per-layer. `.vmap` moves to version 2; v1 files load into the Biomes layer.

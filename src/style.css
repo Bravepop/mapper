@@ -27,7 +27,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-columns: 48px 1fr 190px;
+  grid-template-columns: 48px 1fr 220px;
   grid-template-rows: 44px 1fr 26px;
   grid-template-areas:
     'top top top'
@@ -188,6 +188,10 @@ input[type='checkbox'] {
   border-left: 1px solid var(--border);
 }
 
+#palette h2.first {
+  margin-top: 0;
+}
+
 #palette h2 {
   font-size: 11px;
   text-transform: uppercase;
@@ -297,4 +301,93 @@ input[type='checkbox'] {
 #status-save.error {
   color: var(--danger);
   font-weight: 600;
+}
+
+/* Layers panel */
+.layers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layer {
+  padding: 3px 4px 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.layer.active {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.layer.active .layer-name {
+  font-weight: 600;
+}
+
+.layer.hidden .layer-name {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.icon-btn.small {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.icon-btn.small svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn.on {
+  color: var(--accent);
+}
+
+input[type='range'].layer-opacity {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 2px 4px 0;
+  height: 12px;
+}
+
+/* Short notices over the map (e.g. painting on a locked layer) */
+#notice {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(42, 36, 29, 0.95);
+  color: var(--text);
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
