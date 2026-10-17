@@ -7,9 +7,12 @@ import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
 import { LabelEditor, LabelTool } from './tools/label';
 import { ShapeTool } from './tools/shape';
+import { StampTool } from './tools/stamp';
+import { TextureTool } from './tools/texture';
 import { StrokeTool } from './tools/stroke';
 import type { LineStyle } from './core/paint';
 import type { Cursor, Tool, ToolEvent, ToolId } from './tools/tool';
+import type { GlyphId, TextureId } from './valheim/glyphs';
 
 export interface AppState {
   tool: ToolId;
@@ -26,6 +29,11 @@ export interface AppState {
   smoothing: number;
   /** Rectangles, ellipses and closed polylines are filled (true) or outlined (false). */
   shapeFill: boolean;
+  /** Texture brush pattern and Stamp symbol. */
+  texture: TextureId;
+  stamp: GlyphId;
+  /** Symbol height in meters for the texture brush and stamps. */
+  glyphSize: number;
   /** Defaults for new labels: letter height (m), rotation (degrees), curve (-100..100). */
   labelSize: number;
   labelRotation: number;
@@ -44,6 +52,9 @@ export const DEFAULT_STATE: AppState = {
   shapeFill: false,
   lineStyle: 'solid',
   smoothing: 0,
+  texture: 'forest',
+  stamp: 'tree',
+  glyphSize: 16,
   labelSize: 20,
   labelRotation: 0,
   labelCurve: 0,
@@ -54,6 +65,8 @@ export const DEFAULT_STATE: AppState = {
 export const MIN_SIZE = 1;
 export const MAX_SIZE = 200;
 export const MAX_SMOOTHING = 10;
+export const MIN_GLYPH_SIZE = 4;
+export const MAX_GLYPH_SIZE = 200;
 /** Restyling a selected label becomes one undo step once the controls are idle this long (ms). */
 const LABEL_EDIT_IDLE_MS = 500;
 
@@ -97,6 +110,8 @@ export class App {
       polyline: new ShapeTool(this, 'polyline'),
       rect: new ShapeTool(this, 'rect'),
       ellipse: new ShapeTool(this, 'ellipse'),
+      texture: new TextureTool(this),
+      stamp: new StampTool(this),
       text: new LabelTool(this, 'text', labelEditor),
       select: new LabelTool(this, 'select', labelEditor),
     };
@@ -196,6 +211,7 @@ export class App {
     // Picking a color while a label is selected recolors it.
     if (patch.color && this.isLabelTool && this.selected) this.editLabel({ color: patch.color });
     if (patch.smoothing !== undefined) patch.smoothing = Math.round(Math.min(MAX_SMOOTHING, Math.max(0, patch.smoothing)));
+    if (patch.glyphSize !== undefined) patch.glyphSize = Math.round(Math.min(MAX_GLYPH_SIZE, Math.max(MIN_GLYPH_SIZE, patch.glyphSize)));
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
     Object.assign(this.state, patch);
     for (const fn of this.stateListeners) fn();

@@ -420,3 +420,22 @@ input[type='range'].layer-opacity {
 #label-group input[type='range'] {
   width: 80px;
 }
+
+/* Texture and stamp symbol pickers */
+.glyph-picker {
+  gap: 2px;
+}
+
+.icon-btn.glyph-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.glyph-btn canvas {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-btn.glyph-btn.active canvas {
+  filter: invert(1) brightness(0.3);
+}

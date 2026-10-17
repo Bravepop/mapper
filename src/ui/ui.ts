@@ -1,4 +1,4 @@
-import { isTextInput, MAX_SIZE, MAX_SMOOTHING, MIN_SIZE, type App } from '../app';
+import { isTextInput, MAX_GLYPH_SIZE, MAX_SIZE, MAX_SMOOTHING, MIN_GLYPH_SIZE, MIN_SIZE, type App } from '../app';
 import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
 import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
@@ -6,6 +6,7 @@ import type { Autosave } from '../core/storage';
 import { effectiveGrid, formatEW, formatNS, GRID_SIZES } from '../render/grid';
 import type { ToolId } from '../tools/tool';
 import { BIOMES, INKS, type Swatch } from '../valheim/biomes';
+import { drawGlyph, seededRandom, STAMPS, TEXTURES, type GlyphId } from '../valheim/glyphs';
 import { ICONS } from './icons';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -20,11 +21,16 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
   { id: 'polyline', label: 'Polyline', key: 'Shift+L', hint: 'Click to add points; double-click or Enter to finish, Esc to cancel' },
   { id: 'rect', label: 'Rectangle', key: 'R', hint: 'Drag a rectangle. Shift makes a square' },
   { id: 'ellipse', label: 'Ellipse', key: 'O', hint: 'Drag an ellipse. Shift makes a circle' },
+  { id: 'texture', label: 'Texture brush', key: 'X', hint: 'Paint forests, swamps, mountains, waves or stipple', group: true },
+  { id: 'stamp', label: 'Stamp', key: 'S', hint: 'Click to place a map symbol' },
   { id: 'text', label: 'Text', key: 'T', hint: 'Click the map to add a label, or click a label to edit it', group: true },
   { id: 'select', label: 'Select', key: 'V', hint: 'Select a label to move, restyle or delete it (double-click to edit)' },
 ];
 
-const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse'];
+const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse', 'texture', 'stamp'];
+/** Tools whose Size is the symbol height (glyphSize) rather than the brush/line width. */
+const GLYPH_TOOLS: ToolId[] = ['texture', 'stamp'];
+const isGlyphTool = (app: App) => GLYPH_TOOLS.includes(app.state.tool);
 const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
 const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse'];
 const FREEHAND_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser'];
@@ -38,6 +44,7 @@ const clampLabelSize = (m: number) => Math.min(MAX_LABEL_SIZE, Math.max(MIN_LABE
 export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
   buildToolbar(app);
   buildTopbar(app, files);
+  buildGlyphPickers(app);
   buildLayers(app);
   buildPalette(app);
   buildNotice(app);
@@ -95,10 +102,9 @@ function buildTopbar(app: App, files: FileActions): void {
 
   const size = $<HTMLInputElement>('size');
   const sizeValue = $<HTMLInputElement>('size-value');
-  size.min = sizeValue.min = String(MIN_SIZE);
-  size.max = sizeValue.max = String(MAX_SIZE);
-  size.addEventListener('input', () => app.update({ size: Number(size.value) }));
-  sizeValue.addEventListener('change', () => app.update({ size: Number(sizeValue.value) || MIN_SIZE }));
+  const setSize = (v: number) => app.update(isGlyphTool(app) ? { glyphSize: v || MIN_GLYPH_SIZE } : { size: v || MIN_SIZE });
+  size.addEventListener('input', () => setSize(Number(size.value)));
+  sizeValue.addEventListener('change', () => setSize(Number(sizeValue.value)));
 
   const tol = $<HTMLInputElement>('tolerance');
   const tolValue = $('tolerance-value');
@@ -162,7 +168,12 @@ function buildTopbar(app: App, files: FileActions): void {
 
   const sync = () => {
     const s = app.state;
-    size.value = sizeValue.value = String(s.size);
+    const glyph = isGlyphTool(app);
+    size.min = sizeValue.min = String(glyph ? MIN_GLYPH_SIZE : MIN_SIZE);
+    size.max = sizeValue.max = String(glyph ? MAX_GLYPH_SIZE : MAX_SIZE);
+    size.value = sizeValue.value = String(glyph ? s.glyphSize : s.size);
+    $('texture-group').hidden = s.tool !== 'texture';
+    $('stamp-group').hidden = s.tool !== 'stamp';
     tol.value = String(s.tolerance);
     tolValue.textContent = String(s.tolerance);
     fillSample.value = s.fillSample;
@@ -177,12 +188,67 @@ function buildTopbar(app: App, files: FileActions): void {
     $('label-group').hidden = !LABEL_TOOLS.includes(s.tool);
     syncLabel();
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
-    $('size-label').textContent = s.tool === 'brush' || s.tool === 'eraser' ? 'Size' : 'Width';
+    $('size-label').textContent = ['brush', 'eraser', 'texture', 'stamp'].includes(s.tool) ? 'Size' : 'Width';
     $('shape-group').hidden = !FILLABLE_TOOLS.includes(s.tool);
     $('tolerance-group').hidden = s.tool !== 'fill';
   };
   app.onState(sync);
   sync();
+}
+
+/** A row of small symbol buttons for the texture brush and stamp tools. */
+function buildGlyphPickers(app: App): void {
+  const make = <T extends string>(
+    containerId: string,
+    items: { id: T; name: string; glyph?: GlyphId; dots?: boolean }[],
+    current: () => T,
+    pick: (id: T) => void,
+  ) => {
+    const container = $(containerId);
+    const buttons = items.map((item) => {
+      const b = document.createElement('button');
+      b.className = 'icon-btn glyph-btn';
+      b.title = item.name;
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-label', item.name);
+      const canvas = document.createElement('canvas');
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.height = Math.round(24 * dpr);
+      const ctx = canvas.getContext('2d')!;
+      ctx.scale(dpr, dpr);
+      ctx.strokeStyle = ctx.fillStyle = '#ece0c6';
+      if (item.glyph) drawGlyph(ctx, item.glyph, 12, 12, 20, 1.4, seededRandom(7));
+      else if (item.dots) {
+        const rand = seededRandom(3);
+        for (let i = 0; i < 14; i++) ctx.fillRect(3 + rand() * 18, 3 + rand() * 18, 1.5, 1.5);
+      }
+      b.append(canvas);
+      b.addEventListener('click', () => pick(item.id));
+      container.append(b);
+      return { b, id: item.id };
+    });
+    const sync = () =>
+      buttons.forEach(({ b, id }) => {
+        const on = id === current();
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-checked', String(on));
+      });
+    app.onState(sync);
+    sync();
+  };
+
+  make(
+    'texture-group',
+    TEXTURES.map((t) => ({ id: t.id, name: t.name, glyph: t.glyphs[0], dots: t.glyphs.length === 0 })),
+    () => app.state.texture,
+    (id) => app.update({ texture: id }),
+  );
+  make(
+    'stamp-group',
+    STAMPS.map((s) => ({ id: s.id, name: s.name, glyph: s.id })),
+    () => app.state.stamp,
+    (id) => app.update({ stamp: id }),
+  );
 }
 
 function buildLayers(app: App): void {
@@ -344,6 +410,8 @@ function bindShortcuts(app: App, files: FileActions): void {
     l: 'line',
     r: 'rect',
     o: 'ellipse',
+    x: 'texture',
+    s: 'stamp',
     t: 'text',
     v: 'select',
   };
@@ -374,8 +442,11 @@ function bindShortcuts(app: App, files: FileActions): void {
     if (key === 'g' && e.shiftKey) app.update({ showGrid: !app.state.showGrid });
     else if (key === 'l' && e.shiftKey) app.update({ tool: 'polyline' });
     else if (toolKeys[key]) app.update({ tool: toolKeys[key] });
-    else if (key === '[') app.update({ size: app.state.size - stepFor(app.state.size) });
-    else if (key === ']') app.update({ size: app.state.size + stepFor(app.state.size) });
+    else if (key === '[' || key === ']') {
+      const sign = key === ']' ? 1 : -1;
+      if (isGlyphTool(app)) app.update({ glyphSize: app.state.glyphSize + sign * stepFor(app.state.glyphSize) });
+      else app.update({ size: app.state.size + sign * stepFor(app.state.size) });
+    }
     else if (key === '=' || key === '+') app.zoomBy(1.5);
     else if (key === '-' || key === '_') app.zoomBy(1 / 1.5);
     else if (key === 'h' || key === 'home') app.centerOnSpawn();
