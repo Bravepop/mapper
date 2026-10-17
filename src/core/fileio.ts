@@ -21,7 +21,8 @@ interface VmapFile {
   version: 1 | 2;
   savedAt: string;
   camera: { x: number; y: number; zoom: number };
-  settings: Pick<AppState, 'gridSize' | 'showGrid'> & Partial<Pick<AppState, 'paperGrain' | 'agedEdges' | 'sepia' | 'fog'>>;
+  settings: Pick<AppState, 'gridSize' | 'showGrid'> &
+    Partial<Pick<AppState, 'paperGrain' | 'agedEdges' | 'sepia' | 'fog' | 'elevShade' | 'elevContours' | 'elevTint'>>;
   /** v2 only. */
   activeLayer?: LayerId;
   layers: (Partial<LayerProps> & { id: string; name: string; tiles: VmapTile[] })[];
@@ -154,6 +155,9 @@ export class FileActions {
         agedEdges: this.app.state.agedEdges,
         sepia: this.app.state.sepia,
         fog: this.app.state.fog,
+        elevShade: this.app.state.elevShade,
+        elevContours: this.app.state.elevContours,
+        elevTint: this.app.state.elevTint,
       },
       activeLayer: this.app.activeLayer.id,
       layers,
@@ -207,6 +211,9 @@ export class FileActions {
       agedEdges: file.settings?.agedEdges ?? DEFAULT_STATE.agedEdges,
       sepia: file.settings?.sepia ?? DEFAULT_STATE.sepia,
       fog: file.settings?.fog ?? DEFAULT_STATE.fog,
+      elevShade: file.settings?.elevShade ?? DEFAULT_STATE.elevShade,
+      elevContours: file.settings?.elevContours ?? DEFAULT_STATE.elevContours,
+      elevTint: file.settings?.elevTint ?? DEFAULT_STATE.elevTint,
     });
     this.app.viewChanged();
   }

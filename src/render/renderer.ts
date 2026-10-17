@@ -3,6 +3,7 @@ import { TILE_SIZE, WORLD_RADIUS } from '../core/constants';
 import type { Tile, TileLayer } from '../core/layer';
 import { drawGrid } from './grid';
 import { drawCompass } from './compass';
+import { ElevationRenderer } from './elevation';
 import { FogLayer } from './fog';
 import { drawLabel, outlineLabel } from './labels';
 import { drawAgedEdges, drawGrain, SEPIA_FILTER } from './paper';
@@ -16,6 +17,7 @@ export class Renderer {
   private dpr = 1;
   private frame = 0;
   private fogLayer = new FogLayer();
+  private relief: ElevationRenderer;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -24,6 +26,12 @@ export class Renderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas not supported');
     this.ctx = ctx;
+    this.relief = new ElevationRenderer(app.layers.get('elevation').tiles);
+  }
+
+  /** Forget cached derived images (after the whole document is replaced). */
+  clearCaches(): void {
+    this.relief.clear();
   }
 
   resize(width: number, height: number): void {
@@ -61,10 +69,21 @@ export class Renderer {
     // Each layer's labels draw right after its paint, so layer order applies to both.
     const labels = this.app.labels.all();
     if (state.sepia) ctx.filter = SEPIA_FILTER;
+    this.relief.beginFrame();
     for (const layer of this.app.layers.all) {
       if (!layer.visible || layer.opacity <= 0) continue;
       ctx.globalAlpha = layer.opacity;
-      this.drawTiles(layer.tiles);
+      if (layer.id === 'elevation') {
+        // Relief instead of raw band colors; the bands show as tints while you paint them.
+        const style = {
+          shade: state.elevShade,
+          contours: state.elevContours,
+          tint: state.elevTint || this.app.activeLayer.id === 'elevation',
+        };
+        this.drawTiles(layer.tiles, ctx, false, (tile) => this.relief.render(tile, style));
+      } else {
+        this.drawTiles(layer.tiles);
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       for (const label of labels) {
         if (label.layer === layer.id && label.id !== this.app.editingLabel) drawLabel(ctx, label, cam);
@@ -98,10 +117,17 @@ export class Renderer {
     this.drawSpawn();
     if (!this.app.isPanning) this.app.tool.drawOverlay?.(ctx, this.app.cursor, cam);
     this.drawScaleBar();
+    // Relief tiles left stale by the frame budget: keep refreshing.
+    if (this.relief.deferred) this.request();
   }
 
   /** Draw a tile layer in device pixels. `smooth` blurs pixel edges when zoomed in (used for the fog mask). */
-  private drawTiles(layer: TileLayer, ctx = this.ctx, smooth = false): void {
+  private drawTiles(
+    layer: TileLayer,
+    ctx = this.ctx,
+    smooth = false,
+    image: (tile: Tile) => CanvasImageSource = (tile) => tile.canvas,
+  ): void {
     const { dpr } = this;
     const cam = this.app.camera;
     ctx.imageSmoothingEnabled = smooth || cam.zoom < 1;
@@ -118,7 +144,7 @@ export class Renderer {
       const x1 = Math.round(cam.toScreenX((tile.tx + 1) * TILE_SIZE) * dpr);
       const y0 = Math.round(cam.toScreenY(tile.ty * TILE_SIZE) * dpr);
       const y1 = Math.round(cam.toScreenY((tile.ty + 1) * TILE_SIZE) * dpr);
-      ctx.drawImage(tile.canvas, x0, y0, x1 - x0, y1 - y0);
+      ctx.drawImage(image(tile), x0, y0, x1 - x0, y1 - y0);
     };
 
     // Zoomed far out, there are more visible slots than painted tiles: walk the tiles instead.

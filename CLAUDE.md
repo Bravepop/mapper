@@ -1,6 +1,6 @@
 # Mapper
 
-Paint-style map maker for Valheim immersive mode. Vite + TypeScript + Canvas 2D, no UI framework. See PLAN.md for the roadmap (Phases 1–3 done; Phase 4 next) and README.md for controls and code layout.
+Paint-style map maker for Valheim immersive mode. Vite + TypeScript + Canvas 2D, no UI framework. See PLAN.md for the roadmap (Phases 1–4 done; Phase 5 next) and README.md for controls and code layout.
 
 The app is a set of drawing tools, not a navigation aid: it never works out positions for the user. Keep new features in that spirit.
 
@@ -14,7 +14,7 @@ The app is a set of drawing tools, not a navigation aid: it never works out posi
 ## Design notes
 
 - World units are meters, 1 raster pixel = 1 m. +x is east, +y is south (screen-down); Valheim's Z (north) is -y. The spawn stones are at (0, 0) and the world radius is ~10 km.
-- Layers (`core/layers.ts`): a fixed stack of four (Biomes, Paths, Ink / Outlines, Notes), each with visibility, lock, opacity and order. Tools paint into the active layer; locked or hidden layers refuse paint via `app.canPaint()`. Opacity is display-only.
+- Layers (`core/layers.ts`): a fixed stack of five (Biomes, Elevation, Paths, Ink / Outlines, Notes), each with visibility, lock, opacity and order. Tools paint into the active layer; locked or hidden layers refuse paint via `app.canPaint()`. Opacity is display-only.
 - Each layer's paint lives in sparse 256x256 tiles (`core/layer.ts`). Only painted tiles exist.
 - Painting is hard-edged (no anti-aliasing) on purpose, so the fill bucket stops cleanly at drawn lines. Shapes, texture brushes and stamps follow this too: ink glyphs (`valheim/glyphs.ts`) are stroked on a scratch canvas, then thresholded to solid pixels (`core/ink.ts`).
 - Every pixel change goes through `history.begin()` → `edit.touch(tx, ty)` → `history.commit(edit)`. `begin()` targets the active layer and each patch remembers its layer. That gives undo and also notifies autosave and the renderer.
@@ -22,6 +22,7 @@ The app is a set of drawing tools, not a navigation aid: it never works out posi
   - Labels (`core/labels.ts`, `LabelStore`) belong to a layer and draw right after that layer's tiles, so they follow its order, visibility, lock and opacity. They're drawn in the bundled Uncial Antiqua font (`@fontsource/uncial-antiqua`). Change them with `history.changeLabels()`; live edits (dragging, sliders) go through `labels.put()` then `history.recordLabels()`, or `app.editLabel()` / `flushLabelEdit()`.
   - The compass rose (`core/compass.ts`) is a single object drawn above all layers; north always points up. Change it with `app.setCompass()`, or live with `app.editCompass()` / `flushCompassEdit()`.
 - Fill is bounded to the visible area, up to 1 km from the click. It reads the active layer, or all visible layers when `fillSample` is 'visible'.
+- The Elevation layer holds painted height bands (`valheim/elevation.ts`; any color reads as its nearest band). It's never drawn raw: `render/elevation.ts` turns each tile into hillshade, contours and optional tints, cached per tile, marked stale when the tile or a neighbor changes, and refreshed within a per-frame time budget.
 - Paper look (grain, aged edges, sepia) is display-only, in `render/paper.ts`.
 - Fog of war is a separate `TileLayer` mask (`app.fog`, painted = revealed), not one of the map layers. The Reveal tool edits it with `history.begin(app.fog)`; the renderer cuts it out of an off-screen fog canvas (`render/fog.ts`) when `state.fog` is on.
 - Autosave writes changed tiles to IndexedDB under `layerId/tx,ty` keys, and `fog/tx,ty` for the fog mask (`core/storage.ts`); labels, the compass and layer settings go in the meta record. Older bare `tx,ty` keys migrate into Biomes.

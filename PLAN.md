@@ -77,10 +77,10 @@ Built in this order:
 - [x] Valheim icon stamps you place and label yourself: Portal, Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker. They're ordinary hand-placed stamps with a text label, not smart objects
 - [x] *(Optional)* **Fog of war:** unexplored area shows as parchment, and you "reveal" it as you explore
 
-### Phase 4: Elevation (see section 6)
-- [ ] Elevation band painting layer
-- [ ] Hillshade or contour rendering from painted bands
-- [ ] Spot-height markers
+### Phase 4: Elevation (see section 6) (done)
+- [x] Elevation band painting layer
+- [x] Hillshade and contour rendering from painted bands (plus optional band tints)
+- [x] Spot-height markers (a stamp you label yourself)
 
 ### Phase 5: Desktop polish
 - [ ] Tauri wrapper so it runs as a native `.exe`
@@ -139,4 +139,4 @@ This gives you a useful terrain picture without fake precision, and the data mod
 
 ## 8. Next Step
 
-Phase 4: elevation bands, hillshade or contours, and spot heights (section 6).
+Phase 5: desktop polish (Tauri, always-on-top, PNG export).

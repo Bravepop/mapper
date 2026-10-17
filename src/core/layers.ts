@@ -1,6 +1,6 @@
 import { TileLayer } from './layer';
 
-export type LayerId = 'biomes' | 'paths' | 'ink' | 'notes';
+export type LayerId = 'biomes' | 'elevation' | 'paths' | 'ink' | 'notes';
 
 /** Display and editing properties of a layer (everything except its pixels). */
 export interface LayerProps {
@@ -19,6 +19,8 @@ export interface MapLayer extends LayerProps {
 /** The fixed set of layers, bottom to top, in their default order. */
 export const DEFAULT_LAYERS: readonly LayerProps[] = [
   { id: 'biomes', name: 'Biomes', visible: true, locked: false, opacity: 1 },
+  // Painted in height bands; drawn as hillshade and contours rather than as raw color.
+  { id: 'elevation', name: 'Elevation', visible: true, locked: false, opacity: 1 },
   { id: 'paths', name: 'Paths', visible: true, locked: false, opacity: 1 },
   { id: 'ink', name: 'Ink / Outlines', visible: true, locked: false, opacity: 1 },
   { id: 'notes', name: 'Notes', visible: true, locked: false, opacity: 1 },
@@ -103,14 +105,20 @@ export class LayerStack {
     };
   }
 
-  /** Apply saved settings. Unknown layers are ignored and missing ones keep their default place. */
+  /**
+   * Apply saved settings. Unknown layers are ignored. Layers missing from the
+   * save (e.g. ones added in a later version) go back in just above the layer
+   * they follow by default.
+   */
   restore(state: Partial<LayerStackState> | undefined): void {
     const saved = (state?.layers ?? []).filter((l) => isLayerId(l?.id));
-    const rank = (id: LayerId) => {
-      const i = saved.findIndex((l) => l.id === id);
-      return i >= 0 ? i : saved.length + DEFAULT_LAYERS.findIndex((l) => l.id === id);
-    };
-    this.order.sort((a, b) => rank(a.id) - rank(b.id));
+    const ids: LayerId[] = saved.map((l) => l.id).filter((id, i, all) => all.indexOf(id) === i);
+    DEFAULT_LAYERS.forEach((d, i) => {
+      if (ids.includes(d.id)) return;
+      const prev = i > 0 ? ids.indexOf(DEFAULT_LAYERS[i - 1].id) : -1;
+      ids.splice(prev + 1, 0, d.id);
+    });
+    this.order.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     for (const layer of this.order) {
       const s = saved.find((l) => l.id === layer.id);
       const d = DEFAULT_LAYERS.find((l) => l.id === layer.id)!;

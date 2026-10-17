@@ -108,6 +108,12 @@
           <label><input type="checkbox" id="sepia" /> Sepia ink</label>
           <label title="Cover land you haven't revealed yet (use the Reveal tool, F)"><input type="checkbox" id="fog" /> Fog of war</label>
         </div>
+        <h2>Elevation</h2>
+        <div class="checks">
+          <label><input type="checkbox" id="elev-shade" /> Hillshade</label>
+          <label><input type="checkbox" id="elev-contours" /> Contour lines</label>
+          <label title="Always tint the height bands (they're tinted anyway while you paint the Elevation layer)"><input type="checkbox" id="elev-tint" /> Band colors</label>
+        </div>
         <h2>Color</h2>
         <div class="current">
           <input type="color" id="current-color" title="Pick any color" />
@@ -116,8 +122,14 @@
             <div id="current-color-hex" class="hex"></div>
           </div>
         </div>
-        <h2>Biomes</h2>
-        <div id="biome-swatches" class="swatches"></div>
+        <div id="band-palette" hidden>
+          <h2>Height bands</h2>
+          <div id="band-swatches" class="swatches"></div>
+        </div>
+        <div id="biome-palette">
+          <h2>Biomes</h2>
+          <div id="biome-swatches" class="swatches"></div>
+        </div>
         <h2>Inks</h2>
         <div id="ink-swatches" class="swatches"></div>
         <div class="help">

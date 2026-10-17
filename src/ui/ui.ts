@@ -7,6 +7,7 @@ import type { Autosave } from '../core/storage';
 import { effectiveGrid, formatEW, formatNS, GRID_SIZES } from '../render/grid';
 import type { ToolId } from '../tools/tool';
 import { BIOMES, INKS, type Swatch } from '../valheim/biomes';
+import { BANDS, isBandColor } from '../valheim/elevation';
 import { drawGlyph, seededRandom, STAMPS, TEXTURES, type GlyphId } from '../valheim/glyphs';
 import type { RulerTool } from '../tools/ruler';
 import { ICONS } from './icons';
@@ -60,6 +61,7 @@ export function buildUi(app: App, files: FileActions, autosave: Autosave): void 
   buildLayers(app);
   buildPalette(app);
   buildPaper(app);
+  bindBandPalette(app);
   buildNotice(app);
   buildStatus(app, files, autosave);
   bindShortcuts(app, files);
@@ -393,6 +395,9 @@ function buildPaper(app: App): void {
     agedEdges: $<HTMLInputElement>('aged-edges'),
     sepia: $<HTMLInputElement>('sepia'),
     fog: $<HTMLInputElement>('fog'),
+    elevShade: $<HTMLInputElement>('elev-shade'),
+    elevContours: $<HTMLInputElement>('elev-contours'),
+    elevTint: $<HTMLInputElement>('elev-tint'),
   };
   for (const [key, box] of Object.entries(boxes) as [keyof typeof boxes, HTMLInputElement][]) {
     box.addEventListener('change', () => app.update({ [key]: box.checked }));
@@ -401,6 +406,23 @@ function buildPaper(app: App): void {
     for (const [key, box] of Object.entries(boxes) as [keyof typeof boxes, HTMLInputElement][]) box.checked = app.state[key];
   };
   app.onState(sync);
+  sync();
+}
+
+/**
+ * While the Elevation layer is active the palette offers height bands instead
+ * of biomes, and switching to it picks a band so you don't paint stray colors.
+ */
+function bindBandPalette(app: App): void {
+  let wasElevation = false;
+  const sync = () => {
+    const elevation = app.activeLayer.id === 'elevation';
+    $('band-palette').hidden = !elevation;
+    $('biome-palette').hidden = elevation;
+    if (elevation && !wasElevation && !isBandColor(app.state.color)) app.update({ color: BANDS[3].color });
+    wasElevation = elevation;
+  };
+  app.layers.onChange(sync);
   sync();
 }
 
@@ -433,6 +455,7 @@ function buildPalette(app: App): void {
       swatches.push(b);
     }
   };
+  addGroup('band-swatches', BANDS);
   addGroup('biome-swatches', BIOMES);
   addGroup('ink-swatches', INKS);
 

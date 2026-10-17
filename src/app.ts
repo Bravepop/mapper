@@ -51,6 +51,10 @@ export interface AppState {
   sepia: boolean;
   /** Cover unrevealed land with fog, and the Reveal tool's brush size (m) and mode. */
   fog: boolean;
+  /** How the Elevation layer is drawn: hillshade, contour lines, band colors. */
+  elevShade: boolean;
+  elevContours: boolean;
+  elevTint: boolean;
   revealSize: number;
   revealMode: 'reveal' | 'hide';
   /** Style and diameter (m) for a newly placed compass rose. */
@@ -78,6 +82,9 @@ export const DEFAULT_STATE: AppState = {
   agedEdges: true,
   sepia: false,
   fog: false,
+  elevShade: true,
+  elevContours: true,
+  elevTint: false,
   revealSize: 60,
   revealMode: 'reveal',
   compassStyle: 'ornate',
@@ -337,6 +344,7 @@ export class App {
     this.compass.set(null);
     this.layers.reset();
     this.fog.clear();
+    this.renderer.clearCaches();
     this.labels.clear();
     this.history.clear();
     this.requestRender();

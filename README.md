@@ -2,7 +2,7 @@
 
 A paint-style map maker for Valheim's immersive mode (no in-game map). Draw your world as you explore it, on a meter grid centered on the spawn stones.
 
-See [PLAN.md](PLAN.md) for the full roadmap. Phases 1 (drawing MVP), 2 (hand-made map tools) and 3 (Valheim markers, fog of war) are implemented.
+See [PLAN.md](PLAN.md) for the full roadmap. Phases 1–4 are implemented: drawing MVP, hand-made map tools, Valheim markers and fog of war, and elevation.
 
 ## Run it
 
@@ -43,7 +43,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 
 - **Scale:** 1 pixel of paint is 1 meter. The status bar shows where the cursor is (meters E/W and N/S of spawn) and its distance from spawn. A scale bar sits in the bottom-left corner.
 - **Grid:** pick a cell size from 1 to 500 m. When you zoom out, the grid switches to coarser steps so the lines don't blur together.
-- **Layers:** the map has four layers: Biomes, Paths, Ink / Outlines and Notes. You always paint on the highlighted layer; click a layer's name to switch. Each layer can be hidden (eye), locked (padlock), faded with its opacity slider, or moved up and down. Locked and hidden layers can't be painted on.
+- **Layers:** the map has five layers: Biomes, Elevation, Paths, Ink / Outlines and Notes. You always paint on the highlighted layer; click a layer's name to switch. Each layer can be hidden (eye), locked (padlock), faded with its opacity slider, or moved up and down. Locked and hidden layers can't be painted on.
 - **Shapes:** lines, polylines (coastlines, roads, rivers), rectangles and ellipses use the **Width** setting for their outline. Tick **Filled** to fill rectangles, ellipses and polylines. Click a polyline's first point to close it. Shapes are painted hard-edged into the active layer like the brush, so the fill bucket stops at them.
 - **Line styles:** pencil, brush and shape outlines can be **Solid**, **Dashed** (trails) or **Dotted** (sea routes, borders). Dashed and dotted lines have gaps, so the fill bucket leaks through them; outline areas you want to fill with a solid line.
 - **Smoothing** (pencil, brush, eraser) steadies freehand lines: the paint trails the pointer on a short string and only moves when the string is pulled tight. Higher values give smoother curves; it catches up to the pointer when you let go.
@@ -53,6 +53,7 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 - **Compass rose:** with the **Compass** tool, click to place the map's compass rose, or drag it to move it. Choose **Ornate** or **Simple** and a size in meters. While the tool is active, the color palette recolors it. `Delete` or **Remove** takes it off. North always points up.
 - **Paper:** the sidebar toggles **Parchment grain** (stains and fibers over the whole map), **Aged edges** (darker rim and corners) and **Sepia ink** (fades paint and labels to brown ink). These only change how the map looks and are saved with it.
 - **Ruler:** drag to measure a distance. It shows meters and how many grid cells that is. The measurement is only on screen and nothing is added to the map, unless you press **Draw on map** (or `Enter`). That paints the line in the current color, width and line style on the active layer and adds a label with its length, as one undo step.
+- **Elevation:** select the **Elevation** layer and the palette switches to eight height bands (Deep water, Shallow water, Shore, Lowland, Hills, Highland, Mountain, Peak). Paint them with any tool: brush, fill, filled shapes. Paint what you can see ("this is hilly, that ridge is high"); there's nothing to measure. The layer isn't shown as flat color: it's drawn as **hillshade** (lit from the north-west) and **contour lines** at every band edge over your biomes. **Band colors** tints the bands too, and they're always tinted while the Elevation layer is active. Toggle each in the sidebar's Elevation panel. For a **spot height**, use the Spot height stamp and type a value you estimated, like "≈ +40 m".
 - **Fog of war** (optional): tick **Fog of war** in the Paper panel to cover everything you haven't revealed with hatched parchment. Use the **Reveal** tool to paint explored land clear (Size sets the brush), or switch it to **Hide again** to fog an area back over. The fog is a separate mask, so revealing never changes your drawing. It undoes and saves like everything else.
 - **Labels:** with the **Text** tool, click the map and type a place name (Enter to keep it, Esc to cancel). Labels use the Uncial Antiqua map font, which is bundled with the app, so it works offline. They're kept as editable text, not paint: use **Select** to drag them around, and with a label selected the **Size** (meters, so labels scale with the map), **Rotate** and **Curve** controls and the color palette restyle it. Curve bends the text along an arc. With no label selected, those controls set the style for new labels. A label belongs to the layer that was active when you made it, so it hides, locks and fades with that layer. Fill and the eyedropper ignore labels.
 - **Fill** only spreads across the part of the map you can see, up to 1 km from the click, so filling an open area doesn't flood the whole world. Raise **Tolerance** to fill across slight color differences. By default fill stops at lines on the layer you're painting; switch it to *all visible layers* to fill a biome right up to coastlines you drew on Ink.
@@ -64,8 +65,8 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 src/
   app.ts            app state, input handling (pan/zoom/tool dispatch)
   core/             camera, layer stack and tiled raster layers, labels, undo history, painting, autosave, .vmap file I/O
-  render/           renderer, adaptive grid, labels, compass rose, paper effects, fog
+  render/           renderer, adaptive grid, labels, compass rose, paper effects, fog, elevation relief
   tools/            pencil/brush/eraser (stroke.ts), shapes, texture brush, stamps, compass, ruler, reveal (fog), fill, eyedropper, text/select (label.ts)
   ui/               toolbar, palette, status bar, shortcuts
-  valheim/          biome colors, ink symbols and texture patterns (glyphs.ts)
+  valheim/          biome colors, height bands, ink symbols and texture patterns (glyphs.ts)
 ```

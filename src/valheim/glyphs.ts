@@ -575,6 +575,21 @@ export const GLYPHS = {
     ]);
   },
 
+  /** Spot height: a surveyor's triangle with a dot. */
+  spot(ctx, rand) {
+    poly(
+      ctx,
+      rand,
+      [
+        [0, -0.3],
+        [0.3, 0.22],
+        [-0.3, 0.22],
+      ],
+      true,
+    );
+    dot(ctx, 0, 0.04, 0.06);
+  },
+
   /** Tombstone: where you died. */
   tombstone(ctx, rand) {
     ctx.beginPath();
@@ -623,6 +638,7 @@ export const STAMPS: { id: GlyphId; name: string; group?: boolean }[] = [
   { id: 'mine', name: 'Mine' },
   { id: 'trader', name: 'Trader' },
   { id: 'tombstone', name: 'Death marker' },
+  { id: 'spot', name: 'Spot height (label it, e.g. ≈ +40 m)' },
 ];
 
 export type TextureId = 'forest' | 'pines' | 'swamp' | 'mountains' | 'hills' | 'waves' | 'stipple';
