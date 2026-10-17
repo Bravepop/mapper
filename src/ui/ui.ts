@@ -202,6 +202,9 @@ function buildTopbar(app: App, files: FileActions): void {
   ruler.onChange(syncRuler);
   syncRuler();
 
+  const stampLabel = $<HTMLInputElement>('stamp-label');
+  stampLabel.addEventListener('change', () => app.update({ stampLabel: stampLabel.checked }));
+
   const shapeFill = $<HTMLInputElement>('shape-fill');
   shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
 
@@ -225,6 +228,7 @@ function buildTopbar(app: App, files: FileActions): void {
     grid.value = String(s.gridSize);
     showGrid.checked = s.showGrid;
     shapeFill.checked = s.shapeFill;
+    stampLabel.checked = s.stampLabel;
     lineStyle.value = s.lineStyle;
     smoothing.value = String(s.smoothing);
     smoothingValue.textContent = s.smoothing ? String(s.smoothing) : 'Off';
@@ -248,7 +252,7 @@ function buildTopbar(app: App, files: FileActions): void {
 function buildGlyphPickers(app: App): void {
   const make = <T extends string>(
     containerId: string,
-    items: { id: T; name: string; glyph?: GlyphId; dots?: boolean }[],
+    items: { id: T; name: string; glyph?: GlyphId; dots?: boolean; group?: boolean }[],
     current: () => T,
     pick: (id: T) => void,
   ) => {
@@ -272,6 +276,7 @@ function buildGlyphPickers(app: App): void {
       }
       b.append(canvas);
       b.addEventListener('click', () => pick(item.id));
+      if (item.group) container.append(Object.assign(document.createElement('span'), { className: 'glyph-sep' }));
       container.append(b);
       return { b, id: item.id };
     });
@@ -292,8 +297,8 @@ function buildGlyphPickers(app: App): void {
     (id) => app.update({ texture: id }),
   );
   make(
-    'stamp-group',
-    STAMPS.map((s) => ({ id: s.id, name: s.name, glyph: s.id })),
+    'stamp-picker',
+    STAMPS.map((s) => ({ id: s.id, name: s.name, glyph: s.id, group: s.group })),
     () => app.state.stamp,
     (id) => app.update({ stamp: id }),
   );

@@ -74,7 +74,7 @@ Built in this order:
 8. [x] **Simple ruler:** drag to read a length against the grid. Nothing is kept on the map unless you choose to.
 
 ### Phase 3: Markers and Valheim flavor
-- [ ] Valheim icon stamps you place and label yourself: Portal, Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker. They're ordinary hand-placed stamps with a text label, not smart objects
+- [x] Valheim icon stamps you place and label yourself: Portal, Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker. They're ordinary hand-placed stamps with a text label, not smart objects
 - [ ] *(Optional)* **Fog of war:** unexplored area shows as parchment, and you "reveal" it as you explore
 
 ### Phase 4: Elevation (see section 6)

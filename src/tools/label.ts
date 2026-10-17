@@ -139,7 +139,7 @@ export class LabelTool implements Tool {
  */
 export class LabelEditor {
   private input: HTMLInputElement;
-  private target: { label: Label; isNew: boolean } | null = null;
+  private target: { label: Label; isNew: boolean; onDone?: (label: Label | null) => void } | null = null;
 
   constructor(private app: App) {
     const input = document.createElement('input');
@@ -160,10 +160,15 @@ export class LabelEditor {
     app.onView(() => this.position());
   }
 
-  open(label: Label, isNew: boolean): void {
+  /**
+   * Edit `label`'s text. With `onDone`, the caller takes over creating the
+   * label: it gets the finished label, or null if the text was left empty or
+   * the edit was cancelled.
+   */
+  open(label: Label, isNew: boolean, onDone?: (label: Label | null) => void): void {
     this.commit();
     this.app.flushLabelEdit();
-    this.target = { label: { ...label }, isNew };
+    this.target = { label: { ...label }, isNew, onDone };
     this.app.editingLabel = label.id;
     this.input.value = label.text;
     this.input.style.color = label.color;
@@ -180,6 +185,13 @@ export class LabelEditor {
     if (!t) return;
     const text = this.input.value.trim();
     const current = this.app.labels.get(t.label.id);
+    if (t.onDone) {
+      const done = t.onDone;
+      t.onDone = undefined;
+      this.close();
+      done(text ? { ...t.label, text } : null);
+      return;
+    }
     this.close();
     if (t.isNew) {
       if (!text) return;
@@ -192,12 +204,17 @@ export class LabelEditor {
   }
 
   private close(): void {
-    if (!this.target) return;
+    const t = this.target;
+    if (!t) return;
     this.target = null;
     this.app.editingLabel = null;
     this.input.hidden = true;
     this.app.requestRender();
     if (document.activeElement === this.input) this.app.canvas.focus();
+    // Cancelled while a caller waits for the result: tell it there's no label.
+    const done = t.onDone;
+    t.onDone = undefined;
+    done?.(null);
   }
 
   private get fontPx(): number {

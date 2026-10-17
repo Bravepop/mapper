@@ -342,12 +342,267 @@ export const GLYPHS = {
     ctx.quadraticCurveTo(0, w(rand, 0.12, 0.03), 0.38, 0.4);
     ctx.stroke();
   },
+
+  // Valheim markers.
+
+  /** Portal: a stone frame with horned top and a swirl inside. */
+  portal(ctx, rand) {
+    poly(ctx, rand, [
+      [-0.3, 0.45],
+      [-0.3, -0.3],
+      [0.3, -0.3],
+      [0.3, 0.45],
+    ]);
+    // Lintel with upturned horns.
+    ctx.beginPath();
+    ctx.moveTo(-0.44, -0.46);
+    ctx.quadraticCurveTo(-0.36, -0.3, -0.3, -0.3);
+    ctx.moveTo(0.44, -0.46);
+    ctx.quadraticCurveTo(0.36, -0.3, 0.3, -0.3);
+    ctx.stroke();
+    poly(ctx, rand, [
+      [-0.42, 0.45],
+      [0.42, 0.45],
+    ]);
+    // Swirl.
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      const a = t * Math.PI * 3.2;
+      const r = 0.03 + t * 0.19;
+      const x = Math.cos(a) * r;
+      const y = 0.08 + Math.sin(a) * r * 1.25;
+      if (i) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  },
+
+  /** Bed: a base or spawn point. */
+  bed(ctx, rand) {
+    poly(ctx, rand, [
+      [-0.42, -0.22],
+      [-0.42, 0.34],
+    ]);
+    poly(ctx, rand, [
+      [0.42, 0.04],
+      [0.42, 0.34],
+    ]);
+    poly(ctx, rand, [
+      [-0.42, 0.14],
+      [0.42, 0.14],
+    ]);
+    // Blanket and pillow.
+    ctx.beginPath();
+    ctx.moveTo(-0.42, 0.02);
+    ctx.quadraticCurveTo(w(rand, 0), -0.12, 0.42, 0.04);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-0.27, -0.05, 0.1, 0.06, -0.2, 0, Math.PI * 2);
+    ctx.stroke();
+  },
+
+  /** Boss altar: a slab on two standing stones under a rune. */
+  altar(ctx, rand) {
+    poly(ctx, rand, [
+      [-0.3, 0.42],
+      [-0.26, 0.04],
+      [-0.12, 0.04],
+      [-0.12, 0.42],
+    ]);
+    poly(ctx, rand, [
+      [0.3, 0.42],
+      [0.26, 0.04],
+      [0.12, 0.04],
+      [0.12, 0.42],
+    ]);
+    poly(
+      ctx,
+      rand,
+      [
+        [-0.42, 0.04],
+        [-0.38, -0.08],
+        [0.38, -0.08],
+        [0.42, 0.04],
+      ],
+      true,
+    );
+    // Rune: a diamond with a staff through it.
+    poly(
+      ctx,
+      rand,
+      [
+        [0, -0.46],
+        [0.1, -0.32],
+        [0, -0.18],
+        [-0.1, -0.32],
+      ],
+      true,
+    );
+    poly(ctx, rand, [
+      [0, -0.5],
+      [0, -0.14],
+    ]);
+    poly(ctx, rand, [
+      [-0.46, 0.42],
+      [0.46, 0.42],
+    ]);
+  },
+
+  /** Burial chamber: a barrow mound with a stone doorway. */
+  burial(ctx, rand) {
+    ctx.beginPath();
+    ctx.moveTo(-0.5, 0.36);
+    ctx.quadraticCurveTo(w(rand, 0), w(rand, -0.62, 0.04), 0.5, 0.36);
+    ctx.stroke();
+    poly(ctx, rand, [
+      [-0.5, 0.36],
+      [0.5, 0.36],
+    ]);
+    // Doorway: two posts and a lintel, dark inside.
+    ctx.fillRect(-0.09, 0.08, 0.18, 0.28);
+    poly(ctx, rand, [
+      [-0.14, 0.36],
+      [-0.14, 0.03],
+      [0.14, 0.03],
+      [0.14, 0.36],
+    ]);
+    poly(ctx, rand, [
+      [-0.2, 0.03],
+      [0.2, 0.03],
+    ]);
+  },
+
+  /** Troll cave: a rock face with a big, jagged mouth. */
+  trollcave(ctx, rand) {
+    poly(ctx, rand, [
+      [-0.5, 0.38],
+      [-0.38, -0.06],
+      [-0.18, -0.3],
+      [0.06, -0.42],
+      [0.3, -0.24],
+      [0.44, 0.04],
+      [0.5, 0.38],
+    ]);
+    poly(ctx, rand, [
+      [-0.5, 0.38],
+      [0.5, 0.38],
+    ]);
+    // Mouth with teeth along the top.
+    ctx.beginPath();
+    ctx.moveTo(-0.26, 0.38);
+    ctx.lineTo(-0.24, 0.04);
+    const teeth = 5;
+    for (let i = 0; i <= teeth; i++) {
+      const x = -0.24 + (0.48 * i) / teeth;
+      ctx.lineTo(x, i % 2 ? 0.0 : 0.14);
+    }
+    ctx.lineTo(0.26, 0.38);
+    ctx.closePath();
+    ctx.fill();
+  },
+
+  /** Crypt: a stone vault with a pointed, barred gate. */
+  crypt(ctx, rand) {
+    poly(ctx, rand, [
+      [-0.38, 0.42],
+      [-0.38, -0.12],
+      [0, -0.42],
+      [0.38, -0.12],
+      [0.38, 0.42],
+    ]);
+    poly(ctx, rand, [
+      [-0.46, 0.42],
+      [0.46, 0.42],
+    ]);
+    // Gate.
+    ctx.beginPath();
+    ctx.moveTo(-0.16, 0.42);
+    ctx.lineTo(-0.16, 0.06);
+    ctx.quadraticCurveTo(0, -0.18, 0.16, 0.06);
+    ctx.lineTo(0.16, 0.42);
+    ctx.stroke();
+    for (const x of [-0.08, 0, 0.08]) {
+      poly(ctx, rand, [
+        [x, x === 0 ? -0.06 : 0.0],
+        [x, 0.42],
+      ]);
+    }
+  },
+
+  /** Mine: crossed pickaxes. */
+  mine(ctx, rand) {
+    for (const s of [1, -1]) {
+      poly(ctx, rand, [
+        [-0.32 * s, 0.4],
+        [0.26 * s, -0.24],
+      ]);
+      ctx.beginPath();
+      ctx.moveTo(0.02 * s, -0.42);
+      ctx.quadraticCurveTo(0.34 * s, -0.36, 0.46 * s, -0.04);
+      ctx.stroke();
+    }
+  },
+
+  /** Trader: a tied coin purse. */
+  trader(ctx, rand) {
+    ctx.beginPath();
+    ctx.moveTo(-0.12, -0.2);
+    ctx.quadraticCurveTo(-0.44, 0.0, -0.36, 0.3);
+    ctx.quadraticCurveTo(0, 0.5, 0.36, 0.3);
+    ctx.quadraticCurveTo(0.44, 0.0, 0.12, -0.2);
+    ctx.stroke();
+    poly(ctx, rand, [
+      [-0.16, -0.2],
+      [0.16, -0.2],
+    ]);
+    // Gathered cloth above the tie, and a coin mark on the bag.
+    poly(ctx, rand, [
+      [-0.12, -0.2],
+      [-0.18, -0.36],
+      [-0.06, -0.28],
+      [0, -0.4],
+      [0.06, -0.28],
+      [0.18, -0.36],
+      [0.12, -0.2],
+    ]);
+    ctx.beginPath();
+    ctx.arc(0, 0.16, 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    poly(ctx, rand, [
+      [0, 0.09],
+      [0, 0.23],
+    ]);
+  },
+
+  /** Tombstone: where you died. */
+  tombstone(ctx, rand) {
+    ctx.beginPath();
+    ctx.moveTo(-0.24, 0.36);
+    ctx.lineTo(-0.24, -0.16);
+    ctx.arc(0, -0.16, 0.24, Math.PI, 0);
+    ctx.lineTo(0.24, 0.36);
+    ctx.stroke();
+    poly(ctx, rand, [
+      [-0.42, 0.4],
+      [0.42, 0.4],
+    ]);
+    // Rune cross.
+    poly(ctx, rand, [
+      [0, -0.26],
+      [0, 0.18],
+    ]);
+    poly(ctx, rand, [
+      [-0.11, -0.08],
+      [0.11, -0.08],
+    ]);
+  },
 } satisfies Record<string, GlyphFn>;
 
 export type GlyphId = keyof typeof GLYPHS;
 
-/** Symbols offered by the Stamp tool, in picker order. */
-export const STAMPS: { id: GlyphId; name: string }[] = [
+/** Symbols offered by the Stamp tool, in picker order: landscape symbols, then Valheim markers. */
+export const STAMPS: { id: GlyphId; name: string; group?: boolean }[] = [
   { id: 'tree', name: 'Tree' },
   { id: 'pine', name: 'Pine' },
   { id: 'rock', name: 'Rock' },
@@ -359,6 +614,15 @@ export const STAMPS: { id: GlyphId; name: string }[] = [
   { id: 'ship', name: 'Ship' },
   { id: 'skull', name: 'Skull' },
   { id: 'grave', name: 'Grave' },
+  { id: 'portal', name: 'Portal', group: true },
+  { id: 'bed', name: 'Bed / base' },
+  { id: 'altar', name: 'Boss altar' },
+  { id: 'burial', name: 'Burial chamber' },
+  { id: 'trollcave', name: 'Troll cave' },
+  { id: 'crypt', name: 'Crypt' },
+  { id: 'mine', name: 'Mine' },
+  { id: 'trader', name: 'Trader' },
+  { id: 'tombstone', name: 'Death marker' },
 ];
 
 export type TextureId = 'forest' | 'pines' | 'swamp' | 'mountains' | 'hills' | 'waves' | 'stipple';

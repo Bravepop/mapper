@@ -35,6 +35,8 @@ export interface AppState {
   /** Texture brush pattern and Stamp symbol. */
   texture: TextureId;
   stamp: GlyphId;
+  /** Stamps open a label box for a name or note. */
+  stampLabel: boolean;
   /** Symbol height in meters for the texture brush and stamps. */
   glyphSize: number;
   /** Defaults for new labels: letter height (m), rotation (degrees), curve (-100..100). */
@@ -65,6 +67,7 @@ export const DEFAULT_STATE: AppState = {
   texture: 'forest',
   stamp: 'tree',
   glyphSize: 16,
+  stampLabel: true,
   paperGrain: true,
   agedEdges: true,
   sepia: false,
@@ -130,7 +133,7 @@ export class App {
       rect: new ShapeTool(this, 'rect'),
       ellipse: new ShapeTool(this, 'ellipse'),
       texture: new TextureTool(this),
-      stamp: new StampTool(this),
+      stamp: new StampTool(this, labelEditor),
       compass: new CompassTool(this),
       ruler: new RulerTool(this),
       text: new LabelTool(this, 'text', labelEditor),

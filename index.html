@@ -35,7 +35,10 @@
           <label title="Fill rectangles, ellipses and closed polylines"><input type="checkbox" id="shape-fill" /> Filled</label>
         </div>
         <div class="group glyph-picker" id="texture-group" role="radiogroup" aria-label="Texture"></div>
-        <div class="group glyph-picker" id="stamp-group" role="radiogroup" aria-label="Symbol"></div>
+        <div class="group glyph-picker" id="stamp-group">
+          <div class="glyph-row" id="stamp-picker" role="radiogroup" aria-label="Symbol"></div>
+          <label title="Type a name or note under each symbol (Esc or empty skips it)"><input type="checkbox" id="stamp-label" /> Add a label</label>
+        </div>
         <div class="group" id="compass-group">
           <label for="compass-style">Rose</label>
           <select id="compass-style">
