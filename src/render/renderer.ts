@@ -2,7 +2,9 @@ import type { App } from '../app';
 import { TILE_SIZE, WORLD_RADIUS } from '../core/constants';
 import type { Tile, TileLayer } from '../core/layer';
 import { drawGrid } from './grid';
+import { drawCompass } from './compass';
 import { drawLabel, outlineLabel } from './labels';
+import { drawAgedEdges, drawGrain, SEPIA_FILTER } from './paper';
 
 const OUTSIDE = '#2e2a24';
 const PARCHMENT = '#efe4c8';
@@ -56,6 +58,7 @@ export class Renderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     // Each layer's labels draw right after its paint, so layer order applies to both.
     const labels = this.app.labels.all();
+    if (state.sepia) ctx.filter = SEPIA_FILTER;
     for (const layer of this.app.layers.all) {
       if (!layer.visible || layer.opacity <= 0) continue;
       ctx.globalAlpha = layer.opacity;
@@ -67,9 +70,17 @@ export class Renderer {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     ctx.globalAlpha = 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const compass = this.app.compass.get();
+    if (compass) drawCompass(ctx, compass, cam);
+    ctx.filter = 'none';
+    if (state.paperGrain) drawGrain(ctx, cam);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (state.showGrid) drawGrid(ctx, cam, dpr, state.gridSize);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (state.agedEdges) drawAgedEdges(ctx, cam);
     const selected = this.app.selected;
     if (selected && (state.tool === 'select' || state.tool === 'text') && selected.id !== this.app.editingLabel) {
       outlineLabel(ctx, selected, cam);

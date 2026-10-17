@@ -1,4 +1,5 @@
 import { TILE_SIZE } from './constants';
+import type { Compass, CompassStore } from './compass';
 import type { LabelChange, LabelStore } from './labels';
 import { tileKey, type Tile, type TileLayer } from './layer';
 
@@ -16,6 +17,8 @@ interface Patch {
 interface Entry {
   patches: Patch[];
   labels: LabelChange[];
+  /** Compass rose before/after, if this step changed it. */
+  compass?: { before: Compass | null; after: Compass | null };
 }
 
 const TILE_BYTES = TILE_SIZE * TILE_SIZE * 4;
@@ -69,6 +72,7 @@ export class History {
   constructor(
     private target: () => TileLayer,
     private labels: LabelStore,
+    private compass: CompassStore,
   ) {}
 
   get canUndo(): boolean {
@@ -99,6 +103,12 @@ export class History {
   recordLabels(...changes: LabelChange[]): void {
     const real = changes.filter((c) => JSON.stringify(c.before) !== JSON.stringify(c.after));
     if (real.length) this.push({ patches: [], labels: real });
+  }
+
+  /** Record a compass change that was already applied. */
+  recordCompass(before: Compass | null, after: Compass | null): void {
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    this.push({ patches: [], labels: [], compass: { before, after } });
   }
 
   private push(entry: Entry): void {
@@ -137,6 +147,7 @@ export class History {
   private apply(entry: Entry, side: 'before' | 'after'): void {
     const labels = side === 'before' ? [...entry.labels].reverse() : entry.labels;
     for (const c of labels) this.labels.apply(c, side);
+    if (entry.compass) this.compass.set(entry.compass[side]);
     for (const p of entry.patches) {
       const data = p[side];
       if (data) {

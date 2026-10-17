@@ -13,6 +13,7 @@ export const ICONS = {
   ellipse: svg('<ellipse cx="12" cy="12" rx="9" ry="6.5"/>'),
   texture: svg('<path d="M4 20l3-6 3 6"/><path d="M5 17h4"/><path d="M14 11l3-6 3 6"/><path d="M15 8h4"/><path d="M12 21l2-4 2 4"/><path d="M7 14v-2M17 11v2"/>'),
   stamp: svg('<path d="M9 3h6v5l-1 3h-4L9 8z"/><path d="M5 14h14v3H5z"/><path d="M4 21h16"/>'),
+  compass: svg('<circle cx="12" cy="12" r="9"/><path d="M12 4l2 8-2 8-2-8z"/><path d="M4 12l8-2 8 2-8 2z"/>'),
   text: svg('<path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/>'),
   select: svg('<path d="M5 3l14 8-6 1.5L10 19z"/><path d="M13 12.5l4 6"/>'),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),

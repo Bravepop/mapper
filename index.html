@@ -36,6 +36,18 @@
         </div>
         <div class="group glyph-picker" id="texture-group" role="radiogroup" aria-label="Texture"></div>
         <div class="group glyph-picker" id="stamp-group" role="radiogroup" aria-label="Symbol"></div>
+        <div class="group" id="compass-group">
+          <label for="compass-style">Rose</label>
+          <select id="compass-style">
+            <option value="ornate">Ornate</option>
+            <option value="simple">Simple</option>
+          </select>
+          <label for="compass-size">Size</label>
+          <input type="range" id="compass-size" min="0" max="100" title="Diameter" />
+          <input type="number" id="compass-size-value" class="num" />
+          <span class="unit">m</span>
+          <button type="button" id="compass-remove" class="text-btn" title="Remove the compass rose (Delete)">Remove</button>
+        </div>
         <div class="group" id="label-group">
           <span id="label-target" class="unit"></span>
           <label for="label-size">Size</label>
@@ -76,6 +88,12 @@
       <aside id="palette">
         <h2 class="first">Layers</h2>
         <ul id="layers" class="layers" aria-label="Layers, top to bottom"></ul>
+        <h2>Paper</h2>
+        <div class="checks">
+          <label><input type="checkbox" id="paper-grain" /> Parchment grain</label>
+          <label><input type="checkbox" id="aged-edges" /> Aged edges</label>
+          <label><input type="checkbox" id="sepia" /> Sepia ink</label>
+        </div>
         <h2>Color</h2>
         <div class="current">
           <input type="color" id="current-color" title="Pick any color" />
@@ -98,6 +116,7 @@
             <dt>Polyline</dt><dd>Double-click or Enter ends, Esc cancels</dd>
             <dt>Textures</dt><dd>X paints forests, swamps, mountains and more</dd>
             <dt>Stamps</dt><dd>S places one symbol per click</dd>
+            <dt>Compass</dt><dd>C, then click to place or drag it</dd>
             <dt>Labels</dt><dd>T to type, V to select; drag to move, Delete removes</dd>
             <dt>Pick color</dt><dd>Alt + click</dd>
             <dt>Brush size</dt><dd>[ and ]</dd>

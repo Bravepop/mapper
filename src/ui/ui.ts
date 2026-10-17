@@ -1,4 +1,5 @@
 import { isTextInput, MAX_GLYPH_SIZE, MAX_SIZE, MAX_SMOOTHING, MIN_GLYPH_SIZE, MIN_SIZE, type App } from '../app';
+import { MAX_COMPASS_SIZE, MIN_COMPASS_SIZE, type CompassStyle } from '../core/compass';
 import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
 import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
@@ -23,6 +24,7 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
   { id: 'ellipse', label: 'Ellipse', key: 'O', hint: 'Drag an ellipse. Shift makes a circle' },
   { id: 'texture', label: 'Texture brush', key: 'X', hint: 'Paint forests, swamps, mountains, waves or stipple', group: true },
   { id: 'stamp', label: 'Stamp', key: 'S', hint: 'Click to place a map symbol' },
+  { id: 'compass', label: 'Compass rose', key: 'C', hint: 'Click to place the compass rose, drag to move it' },
   { id: 'text', label: 'Text', key: 'T', hint: 'Click the map to add a label, or click a label to edit it', group: true },
   { id: 'select', label: 'Select', key: 'V', hint: 'Select a label to move, restyle or delete it (double-click to edit)' },
 ];
@@ -47,6 +49,7 @@ export function buildUi(app: App, files: FileActions, autosave: Autosave): void 
   buildGlyphPickers(app);
   buildLayers(app);
   buildPalette(app);
+  buildPaper(app);
   buildNotice(app);
   buildStatus(app, files, autosave);
   bindShortcuts(app, files);
@@ -157,6 +160,39 @@ function buildTopbar(app: App, files: FileActions): void {
   };
   app.labels.onChange(syncLabel);
 
+  // Compass controls restyle the placed compass and set the style for placing one.
+  const compassStyle = $<HTMLSelectElement>('compass-style');
+  const compassSize = $<HTMLInputElement>('compass-size');
+  const compassSizeValue = $<HTMLInputElement>('compass-size-value');
+  const compassLog = Math.log(MAX_COMPASS_SIZE / MIN_COMPASS_SIZE);
+  const setCompass = (patch: { style?: CompassStyle; size?: number }) => {
+    if (patch.size !== undefined) patch.size = Math.min(MAX_COMPASS_SIZE, Math.max(MIN_COMPASS_SIZE, Math.round(patch.size) || MIN_COMPASS_SIZE));
+    app.update({
+      ...(patch.style && { compassStyle: patch.style }),
+      ...(patch.size !== undefined && { compassSize: patch.size }),
+    });
+    app.editCompass(patch);
+  };
+  compassStyle.addEventListener('change', () => {
+    setCompass({ style: compassStyle.value as CompassStyle });
+    app.flushCompassEdit();
+  });
+  compassSize.addEventListener('input', () => setCompass({ size: MIN_COMPASS_SIZE * Math.exp((Number(compassSize.value) / 100) * compassLog) }));
+  compassSizeValue.addEventListener('change', () => setCompass({ size: Number(compassSizeValue.value) }));
+  for (const el of [compassSize, compassSizeValue]) el.addEventListener('change', () => app.flushCompassEdit());
+  $('compass-remove').addEventListener('click', () => app.setCompass(null));
+  const syncCompass = () => {
+    const c = app.compass.get();
+    const size = c ? c.size : app.state.compassSize;
+    compassStyle.value = c ? c.style : app.state.compassStyle;
+    compassSize.value = String((100 * Math.log(size / MIN_COMPASS_SIZE)) / compassLog);
+    compassSizeValue.value = String(Math.round(size));
+    compassSizeValue.min = String(MIN_COMPASS_SIZE);
+    compassSizeValue.max = String(MAX_COMPASS_SIZE);
+    ($('compass-remove') as HTMLButtonElement).disabled = !c;
+  };
+  app.compass.onChange(syncCompass);
+
   const shapeFill = $<HTMLInputElement>('shape-fill');
   shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
 
@@ -186,6 +222,8 @@ function buildTopbar(app: App, files: FileActions): void {
     $('style-group').hidden = !STYLED_TOOLS.includes(s.tool);
     $('smoothing-group').hidden = !FREEHAND_TOOLS.includes(s.tool);
     $('label-group').hidden = !LABEL_TOOLS.includes(s.tool);
+    $('compass-group').hidden = s.tool !== 'compass';
+    syncCompass();
     syncLabel();
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
     $('size-label').textContent = ['brush', 'eraser', 'texture', 'stamp'].includes(s.tool) ? 'Size' : 'Width';
@@ -318,6 +356,18 @@ function buildLayers(app: App): void {
   render();
 }
 
+function buildPaper(app: App): void {
+  const boxes = { paperGrain: $<HTMLInputElement>('paper-grain'), agedEdges: $<HTMLInputElement>('aged-edges'), sepia: $<HTMLInputElement>('sepia') };
+  for (const [key, box] of Object.entries(boxes) as [keyof typeof boxes, HTMLInputElement][]) {
+    box.addEventListener('change', () => app.update({ [key]: box.checked }));
+  }
+  const sync = () => {
+    for (const [key, box] of Object.entries(boxes) as [keyof typeof boxes, HTMLInputElement][]) box.checked = app.state[key];
+  };
+  app.onState(sync);
+  sync();
+}
+
 function buildNotice(app: App): void {
   const el = $('notice');
   let timer = 0;
@@ -411,6 +461,7 @@ function bindShortcuts(app: App, files: FileActions): void {
     r: 'rect',
     o: 'ellipse',
     x: 'texture',
+    c: 'compass',
     s: 'stamp',
     t: 'text',
     v: 'select',

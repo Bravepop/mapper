@@ -2,7 +2,7 @@ import type { Camera } from '../core/camera';
 
 export type ShapeKind = 'line' | 'polyline' | 'rect' | 'ellipse';
 
-export type ToolId = 'pencil' | 'brush' | 'eraser' | 'fill' | 'eyedropper' | ShapeKind | 'texture' | 'stamp' | 'text' | 'select';
+export type ToolId = 'pencil' | 'brush' | 'eraser' | 'fill' | 'eyedropper' | ShapeKind | 'texture' | 'stamp' | 'compass' | 'text' | 'select';
 
 /** Pointer position in world meters plus the modifiers tools care about. */
 export interface ToolEvent {

@@ -1,4 +1,5 @@
 import { DEFAULT_STATE, type App, type AppState } from '../app';
+import type { Compass } from './compass';
 import type { Label } from './labels';
 import { isTileEmpty } from './layer';
 import { isLayerId, type LayerId, type LayerProps } from './layers';
@@ -20,12 +21,14 @@ interface VmapFile {
   version: 1 | 2;
   savedAt: string;
   camera: { x: number; y: number; zoom: number };
-  settings: Pick<AppState, 'gridSize' | 'showGrid'>;
+  settings: Pick<AppState, 'gridSize' | 'showGrid'> & Partial<Pick<AppState, 'paperGrain' | 'agedEdges' | 'sepia'>>;
   /** v2 only. */
   activeLayer?: LayerId;
   layers: (Partial<LayerProps> & { id: string; name: string; tiles: VmapTile[] })[];
   /** v2: text labels (vector objects). */
   labels?: Label[];
+  /** v2: the compass rose, if placed. */
+  compass?: Compass | null;
 }
 
 const FILE_VERSION = 2;
@@ -44,6 +47,7 @@ export class FileActions {
   ) {
     app.layers.onTiles(() => this.setModified(true));
     app.labels.onChange(() => this.setModified(true));
+    app.compass.onChange(() => this.setModified(true));
   }
 
   get fileName(): string | null {
@@ -132,10 +136,17 @@ export class FileActions {
       version: FILE_VERSION,
       savedAt: new Date().toISOString(),
       camera: { x, y, zoom },
-      settings: { gridSize: this.app.state.gridSize, showGrid: this.app.state.showGrid },
+      settings: {
+        gridSize: this.app.state.gridSize,
+        showGrid: this.app.state.showGrid,
+        paperGrain: this.app.state.paperGrain,
+        agedEdges: this.app.state.agedEdges,
+        sepia: this.app.state.sepia,
+      },
       activeLayer: this.app.activeLayer.id,
       layers,
       labels: this.app.labels.all(),
+      compass: this.app.compass.get(),
     };
     return JSON.stringify(file);
   }
@@ -168,6 +179,7 @@ export class FileActions {
       this.app.layers.restore({ layers: layers as LayerProps[], active: file.activeLayer ?? 'biomes' });
     }
     this.app.labels.load(file.version === 2 ? file.labels : []);
+    this.app.compass.load(file.version === 2 ? file.compass : null);
     for (const t of images) {
       this.app.layers.get(t.layer).tiles.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
       t.img.close();
@@ -176,6 +188,9 @@ export class FileActions {
     this.app.update({
       gridSize: file.settings?.gridSize ?? DEFAULT_STATE.gridSize,
       showGrid: file.settings?.showGrid ?? DEFAULT_STATE.showGrid,
+      paperGrain: file.settings?.paperGrain ?? DEFAULT_STATE.paperGrain,
+      agedEdges: file.settings?.agedEdges ?? DEFAULT_STATE.agedEdges,
+      sepia: file.settings?.sepia ?? DEFAULT_STATE.sepia,
     });
     this.app.viewChanged();
   }

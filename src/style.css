@@ -439,3 +439,39 @@ input[type='range'].layer-opacity {
 .icon-btn.glyph-btn.active canvas {
   filter: invert(1) brightness(0.3);
 }
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.text-btn {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.text-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.text-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#compass-group input[type='range'] {
+  width: 90px;
+}

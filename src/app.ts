@@ -1,8 +1,10 @@
 import { Camera } from './core/camera';
 import { History } from './core/history';
+import { CompassStore, type Compass, type CompassStyle } from './core/compass';
 import { LabelStore, type Label } from './core/labels';
 import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
+import { CompassTool } from './tools/compass';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
 import { LabelEditor, LabelTool } from './tools/label';
@@ -38,6 +40,13 @@ export interface AppState {
   labelSize: number;
   labelRotation: number;
   labelCurve: number;
+  /** Paper look: grain texture, darkened edges, sepia ink. Display only. */
+  paperGrain: boolean;
+  agedEdges: boolean;
+  sepia: boolean;
+  /** Style and diameter (m) for a newly placed compass rose. */
+  compassStyle: CompassStyle;
+  compassSize: number;
   /** Grid cell size in meters. */
   gridSize: number;
   showGrid: boolean;
@@ -55,6 +64,11 @@ export const DEFAULT_STATE: AppState = {
   texture: 'forest',
   stamp: 'tree',
   glyphSize: 16,
+  paperGrain: true,
+  agedEdges: true,
+  sepia: false,
+  compassStyle: 'ornate',
+  compassSize: 150,
   labelSize: 20,
   labelRotation: 0,
   labelCurve: 0,
@@ -74,7 +88,8 @@ export class App {
   readonly camera = new Camera();
   readonly layers = new LayerStack();
   readonly labels = new LabelStore();
-  readonly history = new History(() => this.layers.active.tiles, this.labels);
+  readonly compass = new CompassStore();
+  readonly history = new History(() => this.layers.active.tiles, this.labels, this.compass);
   readonly renderer: Renderer;
   readonly tools: { [K in ToolId]: Tool };
   readonly eyedropper: EyedropperTool;
@@ -95,6 +110,9 @@ export class App {
   /** A selected label's state before the current run of restyling. */
   private labelEditBefore: Label | null = null;
   private labelEditTimer = 0;
+  /** The compass before the current run of restyling/moving. */
+  private compassEditBefore: Compass | null | undefined = undefined;
+  private compassEditTimer = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas, this);
@@ -112,11 +130,13 @@ export class App {
       ellipse: new ShapeTool(this, 'ellipse'),
       texture: new TextureTool(this),
       stamp: new StampTool(this),
+      compass: new CompassTool(this),
       text: new LabelTool(this, 'text', labelEditor),
       select: new LabelTool(this, 'select', labelEditor),
     };
     this.layers.onTiles(() => this.requestRender());
     this.layers.onChange(() => this.requestRender());
+    this.compass.onChange(() => this.requestRender());
     this.labels.onChange(() => {
       // Undo can remove the selected label.
       if (this.selectedLabel && !this.labels.get(this.selectedLabel)) this.selectLabel(null);
@@ -148,6 +168,32 @@ export class App {
     this.labels.put({ ...label, ...patch });
     clearTimeout(this.labelEditTimer);
     this.labelEditTimer = window.setTimeout(() => this.flushLabelEdit(), LABEL_EDIT_IDLE_MS);
+  }
+
+  /** Change the compass live; recorded for undo once changes go idle (or on flush). */
+  editCompass(patch: Partial<Compass>): void {
+    const c = this.compass.get();
+    if (!c) return;
+    if (this.compassEditBefore === undefined) this.compassEditBefore = c;
+    this.compass.set({ ...c, ...patch });
+    clearTimeout(this.compassEditTimer);
+    this.compassEditTimer = window.setTimeout(() => this.flushCompassEdit(), LABEL_EDIT_IDLE_MS);
+  }
+
+  flushCompassEdit(): void {
+    clearTimeout(this.compassEditTimer);
+    if (this.compassEditBefore === undefined) return;
+    const before = this.compassEditBefore;
+    this.compassEditBefore = undefined;
+    this.history.recordCompass(before, this.compass.get());
+  }
+
+  /** Place, replace or remove the compass as one undo step. */
+  setCompass(c: Compass | null): void {
+    this.flushCompassEdit();
+    const before = this.compass.get();
+    this.compass.set(c);
+    this.history.recordCompass(before, c);
   }
 
   /** Record any pending label restyle as an undo step now. */
@@ -208,8 +254,9 @@ export class App {
   update(patch: Partial<AppState>): void {
     if (patch.tool && this.isDrawing) delete patch.tool;
     if (patch.tool && patch.tool !== this.state.tool) this.tool.deactivate?.();
-    // Picking a color while a label is selected recolors it.
+    // Picking a color while a label is selected recolors it; likewise the compass with the Compass tool.
     if (patch.color && this.isLabelTool && this.selected) this.editLabel({ color: patch.color });
+    if (patch.color && this.state.tool === 'compass' && this.compass.get()) this.editCompass({ color: patch.color });
     if (patch.smoothing !== undefined) patch.smoothing = Math.round(Math.min(MAX_SMOOTHING, Math.max(0, patch.smoothing)));
     if (patch.glyphSize !== undefined) patch.glyphSize = Math.round(Math.min(MAX_GLYPH_SIZE, Math.max(MIN_GLYPH_SIZE, patch.glyphSize)));
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
@@ -239,12 +286,14 @@ export class App {
   undo(): void {
     if (this.isDrawing || this.tool.undoStep?.()) return;
     this.flushLabelEdit();
+    this.flushCompassEdit();
     this.history.undo();
   }
 
   redo(): void {
     if (this.isDrawing || this.tool.hasPending?.()) return;
     this.flushLabelEdit();
+    this.flushCompassEdit();
     this.history.redo();
   }
 
@@ -263,6 +312,9 @@ export class App {
     this.tool.deactivate?.();
     this.selectLabel(null);
     this.labelEditBefore = null;
+    clearTimeout(this.compassEditTimer);
+    this.compassEditBefore = undefined;
+    this.compass.set(null);
     this.layers.reset();
     this.labels.clear();
     this.history.clear();

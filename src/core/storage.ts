@@ -1,5 +1,6 @@
 import type { App, AppState } from '../app';
 import { DEFAULT_STATE } from '../app';
+import type { Compass } from './compass';
 import type { Label } from './labels';
 import { isLayerId, type LayerId, type LayerStackState } from './layers';
 
@@ -17,6 +18,7 @@ export interface SavedMeta {
   layers?: LayerStackState;
   /** Missing in saves from before labels existed. */
   labels?: Label[];
+  compass?: Compass | null;
 }
 
 /**
@@ -86,6 +88,7 @@ export class Autosave {
     });
     app.layers.onChange(() => this.markMeta());
     app.labels.onChange(() => this.markMeta());
+    app.compass.onChange(() => this.markMeta());
     app.onState(() => this.markMeta());
     app.onView(() => this.markMeta());
     window.addEventListener('pagehide', () => void this.flush());
@@ -131,6 +134,7 @@ export class Autosave {
       if (meta) {
         this.app.layers.restore(meta.layers);
         this.app.labels.load(meta.labels);
+        this.app.compass.load(meta.compass);
         this.app.camera.x = meta.camera.x;
         this.app.camera.y = meta.camera.y;
         this.app.camera.zoom = meta.camera.zoom;
@@ -226,6 +230,7 @@ export class Autosave {
       fileName: this.fileName,
       layers: this.app.layers.state(),
       labels: this.app.labels.all(),
+      compass: this.app.compass.get(),
     };
   }
 
