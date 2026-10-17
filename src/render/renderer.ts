@@ -2,6 +2,7 @@ import type { App } from '../app';
 import { TILE_SIZE, WORLD_RADIUS } from '../core/constants';
 import type { Tile, TileLayer } from '../core/layer';
 import { drawGrid } from './grid';
+import { drawLabel, outlineLabel } from './labels';
 
 const OUTSIDE = '#2e2a24';
 const PARCHMENT = '#efe4c8';
@@ -53,15 +54,26 @@ export class Renderer {
 
     // Tiles and grid in device pixels so edges line up exactly.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // Each layer's labels draw right after its paint, so layer order applies to both.
+    const labels = this.app.labels.all();
     for (const layer of this.app.layers.all) {
       if (!layer.visible || layer.opacity <= 0) continue;
       ctx.globalAlpha = layer.opacity;
       this.drawTiles(layer.tiles);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const label of labels) {
+        if (label.layer === layer.id && label.id !== this.app.editingLabel) drawLabel(ctx, label, cam);
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     ctx.globalAlpha = 1;
     if (state.showGrid) drawGrid(ctx, cam, dpr, state.gridSize);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const selected = this.app.selected;
+    if (selected && (state.tool === 'select' || state.tool === 'text') && selected.id !== this.app.editingLabel) {
+      outlineLabel(ctx, selected, cam);
+    }
     this.drawWorldEdge();
     this.drawSpawn();
     if (!this.app.isPanning) this.app.tool.drawOverlay?.(ctx, this.app.cursor, cam);

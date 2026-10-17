@@ -1,4 +1,5 @@
 import { TILE_SIZE } from './constants';
+import type { LabelChange, LabelStore } from './labels';
 import { tileKey, type Tile, type TileLayer } from './layer';
 
 interface Patch {
@@ -11,7 +12,11 @@ interface Patch {
   after: ImageData | null;
 }
 
-type Entry = Patch[];
+/** One undo step: tile pixel patches and/or label changes. */
+interface Entry {
+  patches: Patch[];
+  labels: LabelChange[];
+}
 
 const TILE_BYTES = TILE_SIZE * TILE_SIZE * 4;
 const MAX_ENTRIES = 100;
@@ -61,7 +66,10 @@ export class History {
   private listeners = new Set<() => void>();
 
   /** `target` returns the layer new edits paint into (the active layer). */
-  constructor(private target: () => TileLayer) {}
+  constructor(
+    private target: () => TileLayer,
+    private labels: LabelStore,
+  ) {}
 
   get canUndo(): boolean {
     return this.undoStack.length > 0;
@@ -78,7 +86,23 @@ export class History {
   commit(edit: Edit): void {
     const patches = edit.finish();
     if (patches.length === 0) return;
-    this.undoStack.push(patches);
+    this.push({ patches, labels: [] });
+  }
+
+  /** Apply label changes and record them as one undo step. */
+  changeLabels(...changes: LabelChange[]): void {
+    for (const c of changes) this.labels.apply(c, 'after');
+    this.recordLabels(...changes);
+  }
+
+  /** Record label changes that were already applied live (e.g. while dragging). */
+  recordLabels(...changes: LabelChange[]): void {
+    const real = changes.filter((c) => JSON.stringify(c.before) !== JSON.stringify(c.after));
+    if (real.length) this.push({ patches: [], labels: real });
+  }
+
+  private push(entry: Entry): void {
+    this.undoStack.push(entry);
     this.redoStack = [];
     this.trim();
     this.emit();
@@ -111,7 +135,9 @@ export class History {
   }
 
   private apply(entry: Entry, side: 'before' | 'after'): void {
-    for (const p of entry) {
+    const labels = side === 'before' ? [...entry.labels].reverse() : entry.labels;
+    for (const c of labels) this.labels.apply(c, side);
+    for (const p of entry.patches) {
       const data = p[side];
       if (data) {
         const tile = p.layer.getOrCreate(p.tx, p.ty);
@@ -125,7 +151,7 @@ export class History {
 
   /** Drop the oldest entries once the stack is too long or uses too much memory. */
   private trim(): void {
-    const bytes = (e: Entry) => e.reduce((n, p) => n + (p.before ? TILE_BYTES : 0) + (p.after ? TILE_BYTES : 0), 0);
+    const bytes = (e: Entry) => e.patches.reduce((n, p) => n + (p.before ? TILE_BYTES : 0) + (p.after ? TILE_BYTES : 0), 0);
     let total = this.undoStack.reduce((n, e) => n + bytes(e), 0);
     while (this.undoStack.length > 1 && (this.undoStack.length > MAX_ENTRIES || total > MAX_BYTES)) {
       total -= bytes(this.undoStack.shift()!);

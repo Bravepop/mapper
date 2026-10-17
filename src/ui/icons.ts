@@ -11,6 +11,8 @@ export const ICONS = {
   polyline: svg('<path d="M3 18l5-9 6 5 7-9"/><circle cx="3" cy="18" r="1.2"/><circle cx="8" cy="9" r="1.2"/><circle cx="14" cy="14" r="1.2"/><circle cx="21" cy="5" r="1.2"/>'),
   rect: svg('<rect x="4" y="6" width="16" height="12" rx="0.5"/>'),
   ellipse: svg('<ellipse cx="12" cy="12" rx="9" ry="6.5"/>'),
+  text: svg('<path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/>'),
+  select: svg('<path d="M5 3l14 8-6 1.5L10 19z"/><path d="M13 12.5l4 6"/>'),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
   redo: svg('<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>'),
   newFile: svg('<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/>'),

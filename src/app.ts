@@ -1,9 +1,11 @@
 import { Camera } from './core/camera';
 import { History } from './core/history';
+import { LabelStore, type Label } from './core/labels';
 import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
 import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
+import { LabelEditor, LabelTool } from './tools/label';
 import { ShapeTool } from './tools/shape';
 import { StrokeTool } from './tools/stroke';
 import type { LineStyle } from './core/paint';
@@ -24,6 +26,10 @@ export interface AppState {
   smoothing: number;
   /** Rectangles, ellipses and closed polylines are filled (true) or outlined (false). */
   shapeFill: boolean;
+  /** Defaults for new labels: letter height (m), rotation (degrees), curve (-100..100). */
+  labelSize: number;
+  labelRotation: number;
+  labelCurve: number;
   /** Grid cell size in meters. */
   gridSize: number;
   showGrid: boolean;
@@ -38,6 +44,9 @@ export const DEFAULT_STATE: AppState = {
   shapeFill: false,
   lineStyle: 'solid',
   smoothing: 0,
+  labelSize: 20,
+  labelRotation: 0,
+  labelCurve: 0,
   gridSize: 25,
   showGrid: true,
 };
@@ -45,17 +54,24 @@ export const DEFAULT_STATE: AppState = {
 export const MIN_SIZE = 1;
 export const MAX_SIZE = 200;
 export const MAX_SMOOTHING = 10;
+/** Restyling a selected label becomes one undo step once the controls are idle this long (ms). */
+const LABEL_EDIT_IDLE_MS = 500;
 
 export class App {
   readonly camera = new Camera();
   readonly layers = new LayerStack();
-  readonly history = new History(() => this.layers.active.tiles);
+  readonly labels = new LabelStore();
+  readonly history = new History(() => this.layers.active.tiles, this.labels);
   readonly renderer: Renderer;
   readonly tools: { [K in ToolId]: Tool };
   readonly eyedropper: EyedropperTool;
 
   state: AppState = { ...DEFAULT_STATE };
   cursor: Cursor | null = null;
+  /** The label the Select/Text tools are working on. */
+  selectedLabel: string | null = null;
+  /** The label whose text is open in the editor (hidden on the map meanwhile). */
+  editingLabel: string | null = null;
 
   private stateListeners = new Set<() => void>();
   private noticeListeners = new Set<(msg: string) => void>();
@@ -63,10 +79,14 @@ export class App {
   private pan: { id: number; x: number; y: number } | null = null;
   private drawingId: number | null = null;
   private spaceDown = false;
+  /** A selected label's state before the current run of restyling. */
+  private labelEditBefore: Label | null = null;
+  private labelEditTimer = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas, this);
     this.eyedropper = new EyedropperTool(this);
+    const labelEditor = new LabelEditor(this);
     this.tools = {
       pencil: new StrokeTool(this, 'pencil'),
       brush: new StrokeTool(this, 'brush'),
@@ -77,9 +97,16 @@ export class App {
       polyline: new ShapeTool(this, 'polyline'),
       rect: new ShapeTool(this, 'rect'),
       ellipse: new ShapeTool(this, 'ellipse'),
+      text: new LabelTool(this, 'text', labelEditor),
+      select: new LabelTool(this, 'select', labelEditor),
     };
     this.layers.onTiles(() => this.requestRender());
     this.layers.onChange(() => this.requestRender());
+    this.labels.onChange(() => {
+      // Undo can remove the selected label.
+      if (this.selectedLabel && !this.labels.get(this.selectedLabel)) this.selectLabel(null);
+      this.requestRender();
+    });
     this.bindInput();
 
     const stage = canvas.parentElement!;
@@ -88,6 +115,47 @@ export class App {
 
   get tool(): Tool {
     return this.tools[this.state.tool];
+  }
+
+  get selected(): Label | undefined {
+    return this.selectedLabel ? this.labels.get(this.selectedLabel) : undefined;
+  }
+
+  get isLabelTool(): boolean {
+    return this.state.tool === 'text' || this.state.tool === 'select';
+  }
+
+  /** Restyle the selected label live; the change is recorded for undo once the controls go idle. */
+  editLabel(patch: Partial<Pick<Label, 'size' | 'color' | 'rotation' | 'curve'>>): void {
+    const label = this.selected;
+    if (!label) return;
+    this.labelEditBefore ??= { ...label };
+    this.labels.put({ ...label, ...patch });
+    clearTimeout(this.labelEditTimer);
+    this.labelEditTimer = window.setTimeout(() => this.flushLabelEdit(), LABEL_EDIT_IDLE_MS);
+  }
+
+  /** Record any pending label restyle as an undo step now. */
+  flushLabelEdit(): void {
+    clearTimeout(this.labelEditTimer);
+    const before = this.labelEditBefore;
+    if (!before) return;
+    this.labelEditBefore = null;
+    this.history.recordLabels({ before, after: this.labels.get(before.id) ?? null });
+  }
+
+  selectLabel(id: string | null): void {
+    if (id === this.selectedLabel) return;
+    this.flushLabelEdit();
+    this.selectedLabel = id;
+    for (const fn of this.stateListeners) fn();
+    this.requestRender();
+  }
+
+  /** Labels can be selected and edited when their layer is shown and unlocked. */
+  isLabelEditable(label: Label): boolean {
+    const layer = this.layers.get(label.layer);
+    return layer.visible && !layer.locked;
   }
 
   get activeLayer(): MapLayer {
@@ -125,6 +193,8 @@ export class App {
   update(patch: Partial<AppState>): void {
     if (patch.tool && this.isDrawing) delete patch.tool;
     if (patch.tool && patch.tool !== this.state.tool) this.tool.deactivate?.();
+    // Picking a color while a label is selected recolors it.
+    if (patch.color && this.isLabelTool && this.selected) this.editLabel({ color: patch.color });
     if (patch.smoothing !== undefined) patch.smoothing = Math.round(Math.min(MAX_SMOOTHING, Math.max(0, patch.smoothing)));
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
     Object.assign(this.state, patch);
@@ -152,11 +222,13 @@ export class App {
 
   undo(): void {
     if (this.isDrawing || this.tool.undoStep?.()) return;
+    this.flushLabelEdit();
     this.history.undo();
   }
 
   redo(): void {
     if (this.isDrawing || this.tool.hasPending?.()) return;
+    this.flushLabelEdit();
     this.history.redo();
   }
 
@@ -173,7 +245,10 @@ export class App {
   /** Wipe the map (used by New and before loading a file). */
   resetDocument(): void {
     this.tool.deactivate?.();
+    this.selectLabel(null);
+    this.labelEditBefore = null;
     this.layers.reset();
+    this.labels.clear();
     this.history.clear();
     this.requestRender();
   }

@@ -1,4 +1,5 @@
 import { DEFAULT_STATE, type App, type AppState } from '../app';
+import type { Label } from './labels';
 import { isTileEmpty } from './layer';
 import { isLayerId, type LayerId, type LayerProps } from './layers';
 import type { Autosave } from './storage';
@@ -23,6 +24,8 @@ interface VmapFile {
   /** v2 only. */
   activeLayer?: LayerId;
   layers: (Partial<LayerProps> & { id: string; name: string; tiles: VmapTile[] })[];
+  /** v2: text labels (vector objects). */
+  labels?: Label[];
 }
 
 const FILE_VERSION = 2;
@@ -40,6 +43,7 @@ export class FileActions {
     private autosave: Autosave,
   ) {
     app.layers.onTiles(() => this.setModified(true));
+    app.labels.onChange(() => this.setModified(true));
   }
 
   get fileName(): string | null {
@@ -51,7 +55,7 @@ export class FileActions {
   }
 
   async newMap(): Promise<void> {
-    if (this.app.layers.tileCount > 0 && !confirm('Start a new, empty map?\n\nThe current map will be cleared. Save it first (Ctrl+S) if you want to keep it.')) return;
+    if ((this.app.layers.tileCount > 0 || this.app.labels.size > 0) && !confirm('Start a new, empty map?\n\nThe current map will be cleared. Save it first (Ctrl+S) if you want to keep it.')) return;
     this.app.resetDocument();
     this.app.camera.centerOn(0, 0);
     this.app.camera.zoom = DEFAULT_ZOOM;
@@ -91,7 +95,7 @@ export class FileActions {
   }
 
   async open(): Promise<void> {
-    if (this.modified && this.app.layers.tileCount > 0 && !confirm('Open another map?\n\nUnsaved changes to the current map will be lost.')) return;
+    if (this.modified && (this.app.layers.tileCount > 0 || this.app.labels.size > 0) && !confirm('Open another map?\n\nUnsaved changes to the current map will be lost.')) return;
     try {
       let file: File;
       let handle: FileSystemFileHandle | null = null;
@@ -131,6 +135,7 @@ export class FileActions {
       settings: { gridSize: this.app.state.gridSize, showGrid: this.app.state.showGrid },
       activeLayer: this.app.activeLayer.id,
       layers,
+      labels: this.app.labels.all(),
     };
     return JSON.stringify(file);
   }
@@ -162,6 +167,7 @@ export class FileActions {
     if (file.version === 2) {
       this.app.layers.restore({ layers: layers as LayerProps[], active: file.activeLayer ?? 'biomes' });
     }
+    this.app.labels.load(file.version === 2 ? file.labels : []);
     for (const t of images) {
       this.app.layers.get(t.layer).tiles.getOrCreate(t.x, t.y).ctx.drawImage(t.img, 0, 0);
       t.img.close();

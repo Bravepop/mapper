@@ -398,3 +398,25 @@ input[type='range'].layer-opacity {
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+
+/* In-place label text editor */
+.label-editor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 80px;
+  padding: 2px 6px;
+  border: 1px dashed rgba(140, 40, 20, 0.9);
+  border-radius: 3px;
+  background: rgba(239, 228, 200, 0.92);
+  text-align: center;
+  outline: none;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.label-editor::placeholder {
+  color: rgba(42, 33, 26, 0.4);
+}
+
+#label-group input[type='range'] {
+  width: 80px;
+}

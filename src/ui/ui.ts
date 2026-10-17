@@ -1,4 +1,5 @@
 import { isTextInput, MAX_SIZE, MAX_SMOOTHING, MIN_SIZE, type App } from '../app';
+import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
 import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
 import type { Autosave } from '../core/storage';
@@ -19,12 +20,20 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
   { id: 'polyline', label: 'Polyline', key: 'Shift+L', hint: 'Click to add points; double-click or Enter to finish, Esc to cancel' },
   { id: 'rect', label: 'Rectangle', key: 'R', hint: 'Drag a rectangle. Shift makes a square' },
   { id: 'ellipse', label: 'Ellipse', key: 'O', hint: 'Drag an ellipse. Shift makes a circle' },
+  { id: 'text', label: 'Text', key: 'T', hint: 'Click the map to add a label, or click a label to edit it', group: true },
+  { id: 'select', label: 'Select', key: 'V', hint: 'Select a label to move, restyle or delete it (double-click to edit)' },
 ];
 
 const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse'];
 const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
 const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse'];
 const FREEHAND_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser'];
+const LABEL_TOOLS: ToolId[] = ['text', 'select'];
+
+/** The label size slider is logarithmic: 0..100 maps to MIN..MAX_LABEL_SIZE. */
+const sizeToSlider = (m: number) => (100 * Math.log(m / MIN_LABEL_SIZE)) / Math.log(MAX_LABEL_SIZE / MIN_LABEL_SIZE);
+const sliderToSize = (v: number) => Math.round(MIN_LABEL_SIZE * (MAX_LABEL_SIZE / MIN_LABEL_SIZE) ** (v / 100));
+const clampLabelSize = (m: number) => Math.min(MAX_LABEL_SIZE, Math.max(MIN_LABEL_SIZE, Math.round(m) || MIN_LABEL_SIZE));
 
 export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
   buildToolbar(app);
@@ -105,6 +114,43 @@ function buildTopbar(app: App, files: FileActions): void {
   smoothing.max = String(MAX_SMOOTHING);
   smoothing.addEventListener('input', () => app.update({ smoothing: Number(smoothing.value) }));
 
+  // Label controls restyle the selected label, or set the style for new ones.
+  const labelSize = $<HTMLInputElement>('label-size');
+  const labelSizeValue = $<HTMLInputElement>('label-size-value');
+  const labelRotation = $<HTMLInputElement>('label-rotation');
+  const labelCurve = $<HTMLInputElement>('label-curve');
+  labelSizeValue.min = String(MIN_LABEL_SIZE);
+  labelSizeValue.max = String(MAX_LABEL_SIZE);
+  const setLabel = (size: number, rotationDeg: number, curve: number) => {
+    if (app.selected) app.editLabel({ size, rotation: (rotationDeg * Math.PI) / 180, curve: curve / 100 });
+    else app.update({ labelSize: size, labelRotation: rotationDeg, labelCurve: curve });
+    syncLabel();
+  };
+  const readLabel = (size = sliderToSize(Number(labelSize.value))) =>
+    setLabel(clampLabelSize(size), Number(labelRotation.value), Number(labelCurve.value));
+  labelSize.addEventListener('input', () => readLabel());
+  labelSizeValue.addEventListener('change', () => readLabel(Number(labelSizeValue.value)));
+  labelRotation.addEventListener('input', () => readLabel(Number(labelSizeValue.value)));
+  labelCurve.addEventListener('input', () => readLabel(Number(labelSizeValue.value)));
+  // Releasing a slider ends that change as one undo step.
+  for (const el of [labelSize, labelSizeValue, labelRotation, labelCurve]) el.addEventListener('change', () => app.flushLabelEdit());
+
+  const syncLabel = () => {
+    const sel = app.selected;
+    const s = app.state;
+    const size = sel ? sel.size : s.labelSize;
+    const rot = sel ? Math.round((sel.rotation * 180) / Math.PI) : s.labelRotation;
+    const curve = sel ? Math.round(sel.curve * 100) : s.labelCurve;
+    labelSize.value = String(sizeToSlider(size));
+    labelSizeValue.value = String(size);
+    labelRotation.value = String(rot);
+    $('label-rotation-value').textContent = `${rot}°`;
+    labelCurve.value = String(curve);
+    $('label-curve-value').textContent = String(curve);
+    $('label-target').textContent = sel ? 'Selected label:' : 'New labels:';
+  };
+  app.labels.onChange(syncLabel);
+
   const shapeFill = $<HTMLInputElement>('shape-fill');
   shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
 
@@ -128,6 +174,8 @@ function buildTopbar(app: App, files: FileActions): void {
     smoothingValue.textContent = s.smoothing ? String(s.smoothing) : 'Off';
     $('style-group').hidden = !STYLED_TOOLS.includes(s.tool);
     $('smoothing-group').hidden = !FREEHAND_TOOLS.includes(s.tool);
+    $('label-group').hidden = !LABEL_TOOLS.includes(s.tool);
+    syncLabel();
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
     $('size-label').textContent = s.tool === 'brush' || s.tool === 'eraser' ? 'Size' : 'Width';
     $('shape-group').hidden = !FILLABLE_TOOLS.includes(s.tool);
@@ -296,6 +344,8 @@ function bindShortcuts(app: App, files: FileActions): void {
     l: 'line',
     r: 'rect',
     o: 'ellipse',
+    t: 'text',
+    v: 'select',
   };
 
   window.addEventListener('keydown', (e) => {

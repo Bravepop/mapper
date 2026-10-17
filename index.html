@@ -34,6 +34,19 @@
         <div class="group" id="shape-group">
           <label title="Fill rectangles, ellipses and closed polylines"><input type="checkbox" id="shape-fill" /> Filled</label>
         </div>
+        <div class="group" id="label-group">
+          <span id="label-target" class="unit"></span>
+          <label for="label-size">Size</label>
+          <input type="range" id="label-size" min="0" max="100" title="Letter height" />
+          <input type="number" id="label-size-value" class="num" />
+          <span class="unit">m</span>
+          <label for="label-rotation">Rotate</label>
+          <input type="range" id="label-rotation" min="-180" max="180" />
+          <span id="label-rotation-value" class="unit"></span>
+          <label for="label-curve">Curve</label>
+          <input type="range" id="label-curve" min="-100" max="100" title="Bend the text along an arc (drag left to sag, right to arch)" />
+          <span id="label-curve-value" class="unit"></span>
+        </div>
         <div class="group" id="tolerance-group">
           <label for="tolerance">Tolerance</label>
           <input type="range" id="tolerance" min="0" max="128" />
@@ -81,6 +94,7 @@
             <dt>Straight line</dt><dd>Shift + click</dd>
             <dt>Snap / square</dt><dd>Hold Shift with shapes</dd>
             <dt>Polyline</dt><dd>Double-click or Enter ends, Esc cancels</dd>
+            <dt>Labels</dt><dd>T to type, V to select; drag to move, Delete removes</dd>
             <dt>Pick color</dt><dd>Alt + click</dd>
             <dt>Brush size</dt><dd>[ and ]</dd>
             <dt>Spawn</dt><dd>H</dd>
