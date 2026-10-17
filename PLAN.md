@@ -3,14 +3,16 @@
 A paint-style drawing app for building your own world map while you play with no in-game map.
 Runs on a second monitor or alt-tab while playing.
 
+> **Philosophy:** Mapper is a set of drawing tools, not a navigation aid. Making the map by hand is the fun part, so the app never works out positions for you. The grid and the coordinate readout stay as a passive guide, like graph paper.
+
 ---
 
 ## 1. Goals
 
 - Draw the map the way you'd draw it on paper: freehand, quickly, with mistakes that are easy to fix.
-- Estimate distances using a **grid with a real-world scale** (meters per cell).
-- Paint-style tools: pencil, brush, eraser, fill bucket, shapes, text.
-- Valheim-specific helpers: biome color palette, map markers (portals, bases, bosses, dungeons).
+- A **grid with a real-world scale** (meters per cell) as a passive guide for sizes and distances.
+- Paint-style tools: pencil, brush, eraser, fill bucket, shapes, line styles, text, texture brushes, stamps.
+- Valheim flavor: biome color palette, hand-placed symbols (portals, bases, bosses, dungeons), a parchment look.
 - Show elevation in a way that **doesn't need exact measurements** (see section 6).
 - Never lose work: autosave plus saving to a file.
 
@@ -38,44 +40,42 @@ Runs on a second monitor or alt-tab while playing.
 - Coordinate readout under the cursor: `X: +340 m, Z: −1,210 m` and **distance from spawn**.
 - Optional labels on the grid (A1, B2…) so you can write notes like "crypt at F7".
 
-### How you measure distance in-game (no map, no coordinates)
-The app helps you turn **time** and **counts** into meters:
-1. **Run timer (pace counting):** Hit a hotkey, run in a straight line, hit it again. The app turns seconds into meters using your calibrated run speed.
-2. **Calibration wizard:** Build a straight line of known length (e.g. 10 wood floors at 2 m each = 20 m), time yourself running it, and the app stores your speed for running, walking, and sailing.
-3. **Building-piece ruler:** Wood floors and beams are 2 m, which makes a good reference for short distances.
-4. **Ruler tool:** Drag a line on the map to see its length in meters and its compass bearing.
-
-> Speeds are estimates. Calibrating lets the app use *your* actual pace instead of a guess.
-
 ### Direction
 - North-up map with a compass rose.
 - In-game the sun rises in the east and sets in the west; a reminder appears in the UI to help you orient.
 
 ## 4. Feature Roadmap
 
-### Phase 1: Drawing MVP (the first thing to build)
-- [ ] Vite + TypeScript project scaffold
-- [ ] Canvas with pan (middle-mouse or space+drag) and zoom (scroll wheel)
-- [ ] Grid overlay with configurable meters-per-cell, plus cursor coordinates
-- [ ] Tools: **Pencil**, **Brush** (size slider), **Eraser**, **Fill bucket**, **Eyedropper**
-- [ ] Color picker plus a **Valheim biome palette** (Meadows, Black Forest, Swamp, Mountain, Plains, Ocean, Mistlands, Ashlands, Deep North)
-- [ ] Undo / redo (Ctrl+Z / Ctrl+Y)
-- [ ] Autosave to IndexedDB, plus manual Save/Load to a `.vmap` file
-- [ ] Keyboard shortcuts (B brush, E eraser, G fill, etc. like Paint/Photoshop)
+### Phase 1: Drawing MVP (done)
+- [x] Vite + TypeScript project scaffold
+- [x] Canvas with pan (middle-mouse or space+drag) and zoom (scroll wheel)
+- [x] Grid overlay with configurable meters-per-cell, plus cursor coordinates
+- [x] Tools: **Pencil**, **Brush** (size slider), **Eraser**, **Fill bucket**, **Eyedropper**
+- [x] Color picker plus a **Valheim biome palette** (Meadows, Black Forest, Swamp, Mountain, Plains, Ocean, Mistlands, Ashlands, Deep North)
+- [x] Undo / redo (Ctrl+Z / Ctrl+Y)
+- [x] Autosave to IndexedDB, plus manual Save/Load to a `.vmap` file
+- [x] Keyboard shortcuts (B brush, E eraser, G fill, etc. like Paint/Photoshop)
 
-### Phase 2: Map-maker tools
-- [ ] **Layers:** Terrain/biomes · Paths & roads · Elevation · Markers · Notes. Each layer can be shown, hidden, or locked
-- [ ] **Shapes:** line, polyline (good for coastlines and roads), rectangle, ellipse
-- [ ] **Ruler tool** with distance and bearing
-- [ ] **Run timer and calibration** (from section 3)
-- [ ] **"Dead reckoning" path tool:** pick a heading and a run time, and the app draws that leg from your last point. Chain legs to trace your route
-- [ ] **Text labels** (place names, notes)
+### Phase 2: Hand-made map tools
+Built in this order:
+1. [ ] **Layers:** Biomes · Paths · Ink/Outlines · Notes.
+   - A layers panel to show/hide, lock, set opacity and reorder each layer. Painting goes to the active layer.
+   - Fill reads the active layer by default, with an option to use all visible layers as its boundaries.
+   - Undo, autosave and `.vmap` are per-layer. `.vmap` moves to version 2; v1 files load into the Biomes layer.
+2. [ ] **Shapes:** line, polyline, rectangle, ellipse, each as an outline or filled.
+   - Polyline: click to add points; double-click or Enter finishes; Esc cancels.
+   - Shift snaps to 45°.
+   - Shapes rasterize hard-edged into the active layer, like the brush, so fill keeps working.
+3. [ ] **Smoothing and line styles:** optional stroke stabilizer; solid, dashed (trails) and dotted (sea routes, borders) lines.
+4. [ ] **Text and labels:** place names in a hand-lettered map font, with adjustable size, color and rotation, optionally following a curved path. Labels stay editable vector objects, with a small Select/move/delete tool.
+5. [ ] **Texture brushes:** paintable patterns such as trees (forest), tufts (swamp), peaks (mountain), waves (ocean) and stipple.
+6. [ ] **Stamps:** hand-drawn style symbols you place yourself: tree, rock, cave, tower, camp, ship, skull, and so on.
+7. [ ] **Paper look:** parchment texture, aged-edge vignette, optional ink/sepia style, and a compass rose you place and style.
+8. [ ] **Simple ruler:** drag to read a length against the grid. Nothing is kept on the map unless you choose to.
 
 ### Phase 3: Markers and Valheim flavor
-- [ ] Icon stamps: Portal (with name/tag), Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker
-- [ ] Clicking a marker opens a notes panel ("portal tag: SWAMP1", "iron here")
-- [ ] **Fog of war:** unexplored area shows as parchment, and you "reveal" it as you explore
-- [ ] Parchment / hand-drawn visual style option to suit the game's look
+- [ ] Valheim icon stamps you place and label yourself: Portal, Base/Bed, Boss altar, Burial chamber, Troll cave, Crypt, Mine, Trader, Ship, Death marker. They're ordinary hand-placed stamps with a text label, not smart objects
+- [ ] *(Optional)* **Fog of war:** unexplored area shows as parchment, and you "reveal" it as you explore
 
 ### Phase 4: Elevation (see section 6)
 - [ ] Elevation band painting layer
@@ -85,7 +85,6 @@ The app helps you turn **time** and **counts** into meters:
 ### Phase 5: Desktop polish
 - [ ] Tauri wrapper so it runs as a native `.exe`
 - [ ] Always-on-top / compact mode for a second monitor
-- [ ] Global hotkeys that work while the game window is focused (start/stop run timer, drop "you are here")
 - [ ] Export to PNG
 
 ## 5. Architecture Sketch
@@ -105,18 +104,17 @@ src/
   tools/
     tool.ts            – Tool interface (onDown/onMove/onUp/cursor)
     pencil.ts, brush.ts, eraser.ts, fill.ts, eyedropper.ts
-    ruler.ts, shape.ts, marker.ts, text.ts
+    ruler.ts, shape.ts, stamp.ts, text.ts, select.ts
   ui/
     toolbar.ts, palette.ts, layersPanel.ts, statusBar.ts
   valheim/
     biomes.ts          – biome names + colors
     markers.ts         – icon set definitions
-    calibration.ts     – run speed + timer logic
 ```
 
 **Key design decisions**
 - **Chunked raster tiles** instead of one giant canvas, so a 20 km world doesn't use gigabytes of memory. Only tiles you've drawn on exist.
-- **Vector objects** (markers, text, ruler lines, paths) are stored separately from the raster paint, so they stay sharp and can be edited.
+- **Vector objects** (text labels, and later markers) are stored separately from the raster paint, so they stay sharp and can be edited. Shapes, stamps and texture brushes rasterize into the active layer.
 - **Tool interface:** every tool implements the same small interface, so adding tools is easy.
 - **Undo** stores before/after snapshots of only the tiles a stroke touched.
 
@@ -129,7 +127,7 @@ You can't read altitude in the game, but you can usually tell **relative** heigh
    You paint roughly "this area is hilly, that ridge is high." The app renders the bands as tinted contours or hillshade under the biome layer.
 2. **Biome hints:** Valheim biomes follow height loosely (Ocean is low, Swamp is flat and low, Mountain is high), so the app can suggest a starting band when you paint a biome.
 3. **Slope arrows / ridge lines:** Quick strokes for "uphill this way," cliffs, and ridgelines. These are often more useful than absolute heights for finding your way.
-4. **Spot heights:** Optional markers with a relative value (for example "≈ +40 m above sea"), estimated from building-piece counts or from how long a climb took.
+4. **Spot heights:** Optional markers with a relative value you write yourself (for example "≈ +40 m above sea").
 
 This gives you a useful terrain picture without fake precision, and the data model leaves room for real numbers later.
 
@@ -141,4 +139,4 @@ This gives you a useful terrain picture without fake precision, and the data mod
 
 ## 8. Next Step
 
-Scaffold Phase 1: `npm create vite@latest` (vanilla-ts), then camera + grid, then pencil/brush/eraser/fill, then save/load.
+Phase 2, starting with layers (step 1), then shapes.
