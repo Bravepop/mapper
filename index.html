@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mapper — Valheim map maker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z' fill='%23efe4c8' stroke='%235a3d22' stroke-width='1.5'/></svg>" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div class="brand">Mapper</div>
+        <div class="group" id="file-actions"></div>
+        <div class="group" id="history-actions"></div>
+        <div class="group" id="size-group">
+          <label for="size">Size</label>
+          <input type="range" id="size" />
+          <input type="number" id="size-value" class="num" />
+          <span class="unit">m</span>
+        </div>
+        <div class="group" id="tolerance-group">
+          <label for="tolerance">Tolerance</label>
+          <input type="range" id="tolerance" min="0" max="128" />
+          <span id="tolerance-value" class="unit"></span>
+        </div>
+        <div class="spacer"></div>
+        <div class="group">
+          <label><input type="checkbox" id="show-grid" /> Grid</label>
+          <select id="grid-size" title="Grid cell size (Shift+G toggles the grid)"></select>
+        </div>
+        <div class="group" id="view-actions"></div>
+      </header>
+
+      <nav id="toolbar" aria-label="Tools"></nav>
+
+      <main id="stage">
+        <canvas id="map" tabindex="0" aria-label="Map canvas"></canvas>
+      </main>
+
+      <aside id="palette">
+        <div class="current">
+          <input type="color" id="current-color" title="Pick any color" />
+          <div>
+            <div class="label">Current color</div>
+            <div id="current-color-hex" class="hex"></div>
+          </div>
+        </div>
+        <h2>Biomes</h2>
+        <div id="biome-swatches" class="swatches"></div>
+        <h2>Inks</h2>
+        <div id="ink-swatches" class="swatches"></div>
+        <div class="help">
+          <h2>Controls</h2>
+          <dl>
+            <dt>Pan</dt><dd>Right / middle drag, or Space + drag</dd>
+            <dt>Zoom</dt><dd>Mouse wheel, + / −</dd>
+            <dt>Straight line</dt><dd>Shift + click</dd>
+            <dt>Pick color</dt><dd>Alt + click</dd>
+            <dt>Brush size</dt><dd>[ and ]</dd>
+            <dt>Spawn</dt><dd>H</dd>
+          </dl>
+        </div>
+      </aside>
+
+      <footer id="status">
+        <span id="status-pos"></span>
+        <span id="status-dist"></span>
+        <span id="status-grid"></span>
+        <span class="spacer"></span>
+        <span id="status-file"></span>
+        <span id="status-save"></span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
