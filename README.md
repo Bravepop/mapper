@@ -17,6 +17,22 @@ Then open the URL Vite prints (http://localhost:5173 by default).
 
 Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other browsers download a copy instead.
 
+## Drawing together
+
+The **Together** panel (top of the sidebar) lets several people edit the same map live.
+
+1. One person clicks **Host a session** and sends the link (or the 6-letter code) to the others.
+2. Everyone else opens the link, or pastes it into **Join**. Joining replaces your current map with the host's, so save yours first if you want to keep it.
+3. Everyone can now draw, place stamps and labels, reveal fog and so on. Changes show up for the others within a fraction of a second, and you see each other's pointers with names.
+
+Things to know:
+
+- It's peer-to-peer: a free public matchmaking service (PeerJS) introduces the browsers, then the map goes directly between you. The host's browser is the hub, so the session lasts as long as the host keeps Mapper open. When it ends, everyone keeps their copy.
+- Undo only undoes your own changes. Layer visibility, locks, opacity and the paper settings stay personal.
+- Only the host can start a new map or open a file during a session. Guests get the new map automatically.
+- Everyone needs to open Mapper from an address they can reach. A `localhost` link only works on the host's own computer, so friends need their own copy running (or a published copy of the app), and then they paste the link or code into **Join**.
+- Some strict networks (some workplace or university networks, certain mobile connections) block direct browser-to-browser connections. Home internet is almost always fine.
+
 ## Using it
 
 | Action | How |
@@ -64,9 +80,10 @@ Chrome or Edge is recommended: they can save straight to a `.vmap` file. Other b
 ```
 src/
   app.ts            app state, input handling (pan/zoom/tool dispatch)
+  collab/           live shared sessions (PeerJS): sync engine and pixel-diff codec
   core/             camera, layer stack and tiled raster layers, labels, undo history, painting, autosave, .vmap file I/O
   render/           renderer, adaptive grid, labels, compass rose, paper effects, fog, elevation relief
   tools/            pencil/brush/eraser (stroke.ts), shapes, texture brush, stamps, compass, ruler, reveal (fog), fill, eyedropper, text/select (label.ts)
-  ui/               toolbar, palette, status bar, shortcuts
+  ui/               toolbar, palette, status bar, shortcuts, Together panel
   valheim/          biome colors, height bands, ink symbols and texture patterns (glyphs.ts)
 ```

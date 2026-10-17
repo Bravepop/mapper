@@ -20,6 +20,7 @@ export const tileIndex = (v: number): number => Math.floor(v / TILE_SIZE);
 export class TileLayer {
   private tiles = new Map<string, Tile>();
   private listeners = new Set<(key: string) => void>();
+  private writeListeners = new Set<(tx: number, ty: number) => void>();
 
   get size(): number {
     return this.tiles.size;
@@ -64,6 +65,18 @@ export class TileLayer {
 
   onChange(fn: (key: string) => void): void {
     this.listeners.add(fn);
+  }
+
+  /**
+   * Local edits call this just before changing a tile's pixels, so live
+   * sharing can capture what the tile looked like first.
+   */
+  beforeWrite(tx: number, ty: number): void {
+    for (const fn of this.writeListeners) fn(tx, ty);
+  }
+
+  onBeforeWrite(fn: (tx: number, ty: number) => void): void {
+    this.writeListeners.add(fn);
   }
 
   /** Tell listeners (renderer, autosave) that a tile's pixels changed. */

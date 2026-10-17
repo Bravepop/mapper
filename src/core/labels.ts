@@ -39,6 +39,7 @@ export const newLabelId = (): string => `l${Date.now().toString(36)}${(counter++
 export class LabelStore {
   private labels = new Map<string, Label>();
   private listeners = new Set<() => void>();
+  private updateListeners = new Set<(id: string, label: Label | null) => void>();
 
   get size(): number {
     return this.labels.size;
@@ -60,10 +61,18 @@ export class LabelStore {
   put(label: Label): void {
     this.labels.set(label.id, { ...label });
     this.emit();
+    for (const fn of this.updateListeners) fn(label.id, { ...label });
   }
 
   remove(id: string): void {
-    if (this.labels.delete(id)) this.emit();
+    if (!this.labels.delete(id)) return;
+    this.emit();
+    for (const fn of this.updateListeners) fn(id, null);
+  }
+
+  /** Fires for each added, changed (label) or removed (null) label; not for `load`. */
+  onUpdate(fn: (id: string, label: Label | null) => void): void {
+    this.updateListeners.add(fn);
   }
 
   /** Apply one side of a change (used by undo/redo). */

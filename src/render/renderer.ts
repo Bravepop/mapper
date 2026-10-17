@@ -115,6 +115,7 @@ export class Renderer {
     }
     this.drawWorldEdge();
     this.drawSpawn();
+    this.drawRemoteCursors();
     if (!this.app.isPanning) this.app.tool.drawOverlay?.(ctx, this.app.cursor, cam);
     this.drawScaleBar();
     // Relief tiles left stale by the frame budget: keep refreshing.
@@ -159,6 +160,44 @@ export class Renderer {
           if (tile) draw(tile);
         }
       }
+    }
+  }
+
+  /** Other people's pointers in a shared session: a colored arrow with their name. */
+  private drawRemoteCursors(): void {
+    const { ctx } = this;
+    const cam = this.app.camera;
+    for (const c of this.app.remoteCursors.values()) {
+      const x = cam.toScreenX(c.x);
+      const y = cam.toScreenY(c.y);
+      if (x < -20 || y < -20 || x > cam.width + 20 || y > cam.height + 20) continue;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 15);
+      ctx.lineTo(4, 11);
+      ctx.lineTo(8, 17);
+      ctx.lineTo(10, 16);
+      ctx.lineTo(7, 10);
+      ctx.lineTo(12, 10);
+      ctx.closePath();
+      ctx.fillStyle = c.color;
+      ctx.strokeStyle = 'rgba(20, 15, 10, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = '600 11px system-ui, sans-serif';
+      const w = ctx.measureText(c.name).width + 10;
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.roundRect(12, 14, w, 17, 4);
+      ctx.fill();
+      ctx.fillStyle = '#1d1915';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.fillText(c.name, 17, 23);
+      ctx.restore();
     }
   }
 

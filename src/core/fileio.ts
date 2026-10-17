@@ -63,6 +63,7 @@ export class FileActions {
   }
 
   async newMap(): Promise<void> {
+    if (this.app.replaceBlocked) return void alert(this.app.replaceBlocked);
     if ((this.app.layers.tileCount > 0 || this.app.labels.size > 0) && !confirm('Start a new, empty map?\n\nThe current map will be cleared. Save it first (Ctrl+S) if you want to keep it.')) return;
     this.app.resetDocument();
     this.app.camera.centerOn(0, 0);
@@ -72,6 +73,7 @@ export class FileActions {
     this.setModified(false);
     this.app.viewChanged();
     await this.autosave.replaceAll();
+    this.app.documentReplaced();
   }
 
   async save(saveAs = false): Promise<void> {
@@ -103,6 +105,7 @@ export class FileActions {
   }
 
   async open(): Promise<void> {
+    if (this.app.replaceBlocked) return void alert(this.app.replaceBlocked);
     if (this.modified && (this.app.layers.tileCount > 0 || this.app.labels.size > 0) && !confirm('Open another map?\n\nUnsaved changes to the current map will be lost.')) return;
     try {
       let file: File;
@@ -120,6 +123,7 @@ export class FileActions {
       this.autosave.fileName = file.name;
       this.setModified(false);
       await this.autosave.replaceAll();
+      this.app.documentReplaced();
     } catch (err) {
       if ((err as DOMException).name !== 'AbortError') alert(`Couldn't open the map: ${(err as Error).message}`);
     }

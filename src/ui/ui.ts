@@ -3,6 +3,7 @@ import { MAX_COMPASS_SIZE, MIN_COMPASS_SIZE, type CompassStyle } from '../core/c
 import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
 import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
+import type { Collab } from '../collab/collab';
 import type { Autosave } from '../core/storage';
 import { effectiveGrid, formatEW, formatNS, GRID_SIZES } from '../render/grid';
 import type { ToolId } from '../tools/tool';
@@ -11,6 +12,7 @@ import { BANDS, isBandColor } from '../valheim/elevation';
 import { drawGlyph, seededRandom, STAMPS, TEXTURES, type GlyphId } from '../valheim/glyphs';
 import type { RulerTool } from '../tools/ruler';
 import { ICONS } from './icons';
+import { buildTogether } from './together';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -54,9 +56,10 @@ const sizeToSlider = (m: number) => (100 * Math.log(m / MIN_LABEL_SIZE)) / Math.
 const sliderToSize = (v: number) => Math.round(MIN_LABEL_SIZE * (MAX_LABEL_SIZE / MIN_LABEL_SIZE) ** (v / 100));
 const clampLabelSize = (m: number) => Math.min(MAX_LABEL_SIZE, Math.max(MIN_LABEL_SIZE, Math.round(m) || MIN_LABEL_SIZE));
 
-export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
+export function buildUi(app: App, files: FileActions, autosave: Autosave, collab: Collab): void {
   buildToolbar(app);
   buildTopbar(app, files);
+  buildTogether(app, collab);
   buildGlyphPickers(app);
   buildLayers(app);
   buildPalette(app);

@@ -1,6 +1,7 @@
 import '@fontsource/uncial-antiqua';
 import './style.css';
 import { App } from './app';
+import { Collab } from './collab/collab';
 import { FileActions } from './core/fileio';
 import { LABEL_FONT } from './core/labels';
 import { Autosave } from './core/storage';
@@ -12,7 +13,8 @@ async function start(): Promise<void> {
   const autosave = new Autosave(app);
   await autosave.load();
   const files = new FileActions(app, autosave);
-  buildUi(app, files, autosave);
+  const collab = new Collab(app, autosave);
+  buildUi(app, files, autosave, collab);
   app.viewChanged();
   canvas.focus();
 

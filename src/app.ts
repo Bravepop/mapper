@@ -123,6 +123,13 @@ export class App {
   selectedLabel: string | null = null;
   /** The label whose text is open in the editor (hidden on the map meanwhile). */
   editingLabel: string | null = null;
+  /** Other people's pointers in a shared session, by peer id. */
+  remoteCursors = new Map<string, { name: string; color: string; x: number; y: number }>();
+  /** When set, painting is paused and this explains why (e.g. while the shared map loads). */
+  paintBlocked: string | null = null;
+  /** When set, New/Open are unavailable and this explains why (e.g. you're a guest in a shared session). */
+  replaceBlocked: string | null = null;
+  private replacedListeners = new Set<() => void>();
 
   private stateListeners = new Set<() => void>();
   private noticeListeners = new Set<(msg: string) => void>();
@@ -255,7 +262,8 @@ export class App {
    */
   canPaint(): boolean {
     const layer = this.activeLayer;
-    if (layer.locked) this.notice(`“${layer.name}” is locked. Unlock it in the Layers panel to paint on it.`);
+    if (this.paintBlocked) this.notice(this.paintBlocked);
+    else if (layer.locked) this.notice(`“${layer.name}” is locked. Unlock it in the Layers panel to paint on it.`);
     else if (!layer.visible) this.notice(`“${layer.name}” is hidden. Show it in the Layers panel to paint on it.`);
     else return true;
     return false;
@@ -332,6 +340,15 @@ export class App {
   centerOnSpawn(): void {
     this.camera.centerOn(0, 0);
     this.viewChanged();
+  }
+
+  /** Fires after New or Open replaced the whole map (shared sessions resend it). */
+  onDocumentReplaced(fn: () => void): void {
+    this.replacedListeners.add(fn);
+  }
+
+  documentReplaced(): void {
+    for (const fn of this.replacedListeners) fn();
   }
 
   /** Wipe the map (used by New and before loading a file). */

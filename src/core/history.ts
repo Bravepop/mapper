@@ -37,6 +37,7 @@ export class Edit {
 
   /** Get a tile for writing, creating it if needed and snapshotting its pre-edit state. */
   touch(tx: number, ty: number): Tile {
+    this.layer.beforeWrite(tx, ty);
     const key = tileKey(tx, ty);
     const existing = this.layer.get(tx, ty);
     if (!this.patches.has(key)) {
@@ -151,15 +152,32 @@ export class History {
     const labels = side === 'before' ? [...entry.labels].reverse() : entry.labels;
     for (const c of labels) this.labels.apply(c, side);
     if (entry.compass) this.compass.set(entry.compass[side]);
+    // Only the pixels this edit changed are put back, so undo never wipes out
+    // other changes made to the same tile since (e.g. by someone else in a shared session).
     for (const p of entry.patches) {
-      const data = p[side];
-      if (data) {
-        const tile = p.layer.getOrCreate(p.tx, p.ty);
-        tile.ctx.putImageData(data, 0, 0);
-        p.layer.notify(tile.key);
-      } else {
-        p.layer.remove(p.tx, p.ty);
+      const from = (side === 'before' ? p.after : p.before)?.data;
+      const to = p[side]?.data;
+      p.layer.beforeWrite(p.tx, p.ty);
+      const tile = p.layer.getOrCreate(p.tx, p.ty);
+      const img = tile.ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const f0 = from ? from[i] : 0;
+        const f1 = from ? from[i + 1] : 0;
+        const f2 = from ? from[i + 2] : 0;
+        const f3 = from ? from[i + 3] : 0;
+        const t0 = to ? to[i] : 0;
+        const t1 = to ? to[i + 1] : 0;
+        const t2 = to ? to[i + 2] : 0;
+        const t3 = to ? to[i + 3] : 0;
+        if (f0 === t0 && f1 === t1 && f2 === t2 && f3 === t3) continue;
+        d[i] = t0;
+        d[i + 1] = t1;
+        d[i + 2] = t2;
+        d[i + 3] = t3;
       }
+      tile.ctx.putImageData(img, 0, 0);
+      p.layer.notify(tile.key);
     }
   }
 
