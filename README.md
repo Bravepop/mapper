@@ -4,6 +4,10 @@ A paint-style map maker for Valheim's immersive mode (no in-game map). Draw your
 
 See [PLAN.md](PLAN.md) for the full roadmap. Phases 1–4 are implemented: drawing MVP, hand-made map tools, Valheim markers and fog of war, and elevation.
 
+## Use it online
+
+Mapper is published at **https://bravepop.github.io/mapper/** (rebuilt automatically on every push to `main`). Share that address, or a join link from it, with friends.
+
 ## Run it
 
 ```bash
@@ -30,7 +34,7 @@ Things to know:
 - It's peer-to-peer: a free public matchmaking service (PeerJS) introduces the browsers, then the map goes directly between you. The host's browser is the hub, so the session lasts as long as the host keeps Mapper open. When it ends, everyone keeps their copy.
 - Undo only undoes your own changes. Layer visibility, locks, opacity and the paper settings stay personal.
 - Only the host can start a new map or open a file during a session. Guests get the new map automatically.
-- Everyone needs to open Mapper from an address they can reach. A `localhost` link only works on the host's own computer, so friends need their own copy running (or a published copy of the app), and then they paste the link or code into **Join**.
+- Host from the published app (https://bravepop.github.io/mapper/) so the join link works for everyone. A link from a local `localhost` copy only works on the host's computer; friends could still paste its code into **Join** in their own copy.
 - Some strict networks (some workplace or university networks, certain mobile connections) block direct browser-to-browser connections. Home internet is almost always fine.
 
 ## Using it

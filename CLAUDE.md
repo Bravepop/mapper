@@ -10,6 +10,7 @@ The app is a set of drawing tools, not a navigation aid: it never works out posi
 - `npm run dev` starts Vite. The `.claude/launch.json` config "mapper" runs it on port 5174 for the browser preview.
 - `npm run typecheck` / `npm run build` before committing.
 - GitHub: https://github.com/Bravepop/mapper (branch `main`). Push with `git push`. The `gh` CLI is not installed.
+- Every push to `main` publishes the app to GitHub Pages (https://bravepop.github.io/mapper/) via `.github/workflows/pages.yml`. Production builds use base `/mapper/` (`vite.config.ts`). The "mapper-build" launch config previews a build at http://localhost:4174/mapper/ (run `npm run build` first).
 
 ## Design notes
 

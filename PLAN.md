@@ -85,7 +85,7 @@ Built in this order:
 ### Shared maps (done)
 - [x] Live shared sessions: one person hosts and shares a link, others join. Peer-to-peer via PeerJS, host relays
 - [x] Paint, labels, compass and fog sync within a fraction of a second; everyone sees each other's pointers
-- [ ] Publish the app at a public address (e.g. GitHub Pages) so friends can open join links without running it themselves
+- [x] Publish the app at a public address (GitHub Pages) so friends can open join links without running it themselves
 
 ### Phase 5: Desktop polish
 - [ ] Tauri wrapper so it runs as a native `.exe`
