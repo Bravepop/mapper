@@ -1,4 +1,5 @@
-import { isTextInput, MAX_SIZE, MIN_SIZE, type App } from '../app';
+import { isTextInput, MAX_SIZE, MAX_SMOOTHING, MIN_SIZE, type App } from '../app';
+import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
 import type { Autosave } from '../core/storage';
 import { effectiveGrid, formatEW, formatNS, GRID_SIZES } from '../render/grid';
@@ -22,6 +23,8 @@ const TOOLS: { id: ToolId; label: string; key: string; hint: string; group?: boo
 
 const SIZED_TOOLS: ToolId[] = ['brush', 'eraser', 'line', 'polyline', 'rect', 'ellipse'];
 const FILLABLE_TOOLS: ToolId[] = ['polyline', 'rect', 'ellipse'];
+const STYLED_TOOLS: ToolId[] = ['pencil', 'brush', 'line', 'polyline', 'rect', 'ellipse'];
+const FREEHAND_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser'];
 
 export function buildUi(app: App, files: FileActions, autosave: Autosave): void {
   buildToolbar(app);
@@ -94,6 +97,14 @@ function buildTopbar(app: App, files: FileActions): void {
   const fillSample = $<HTMLSelectElement>('fill-sample');
   fillSample.addEventListener('change', () => app.update({ fillSample: fillSample.value as 'layer' | 'visible' }));
 
+  const lineStyle = $<HTMLSelectElement>('line-style');
+  lineStyle.addEventListener('change', () => app.update({ lineStyle: lineStyle.value as LineStyle }));
+  const smoothing = $<HTMLInputElement>('smoothing');
+  const smoothingValue = $('smoothing-value');
+  smoothing.min = '0';
+  smoothing.max = String(MAX_SMOOTHING);
+  smoothing.addEventListener('input', () => app.update({ smoothing: Number(smoothing.value) }));
+
   const shapeFill = $<HTMLInputElement>('shape-fill');
   shapeFill.addEventListener('change', () => app.update({ shapeFill: shapeFill.checked }));
 
@@ -112,6 +123,11 @@ function buildTopbar(app: App, files: FileActions): void {
     grid.value = String(s.gridSize);
     showGrid.checked = s.showGrid;
     shapeFill.checked = s.shapeFill;
+    lineStyle.value = s.lineStyle;
+    smoothing.value = String(s.smoothing);
+    smoothingValue.textContent = s.smoothing ? String(s.smoothing) : 'Off';
+    $('style-group').hidden = !STYLED_TOOLS.includes(s.tool);
+    $('smoothing-group').hidden = !FREEHAND_TOOLS.includes(s.tool);
     $('size-group').hidden = !SIZED_TOOLS.includes(s.tool);
     $('size-label').textContent = s.tool === 'brush' || s.tool === 'eraser' ? 'Size' : 'Width';
     $('shape-group').hidden = !FILLABLE_TOOLS.includes(s.tool);

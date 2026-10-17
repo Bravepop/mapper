@@ -139,7 +139,12 @@ export class ShapeTool implements Tool {
       ctx.globalAlpha = 0.75;
       ctx.fillStyle = ctx.strokeStyle = this.app.state.color;
       if (this.filled && shape.closed) ctx.fill(path);
-      ctx.lineWidth = Math.max(1, (2 * this.radius + 1) * cam.zoom);
+      const w = 2 * this.radius + 1;
+      ctx.lineWidth = Math.max(1, w * cam.zoom);
+      // Approximate the painted dash pattern (see PathPainter).
+      const style = this.app.state.lineStyle;
+      if (style === 'dashed') ctx.setLineDash([(4 * w + 2) * cam.zoom, (3 * w + 1) * cam.zoom]);
+      else if (style === 'dotted') ctx.setLineDash([0.01, Math.max(3, 2.5 * w) * cam.zoom]);
       ctx.stroke(path);
       ctx.restore();
       if (this.id === 'polyline') this.drawVertices(ctx, cam);
@@ -197,7 +202,7 @@ export class ShapeTool implements Tool {
     const px = pts.map((p) => ({ x: Math.round(p.x - 0.5) + 0.5, y: Math.round(p.y - 0.5) + 0.5 }));
     const color = this.app.state.color;
     if (closed && this.filled) fillPolygon(edit, px, color);
-    strokePath(edit, px, this.radius, color, closed);
+    strokePath(edit, px, this.radius, color, closed, this.app.state.lineStyle);
     this.app.history.commit(edit);
     this.app.requestRender();
   }

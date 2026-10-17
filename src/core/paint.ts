@@ -46,39 +46,88 @@ export function stamp(edit: Edit, x: number, y: number, r: number, color: string
   }
 }
 
-/** Stamp along a segment, excluding the start point (already stamped by the previous segment). */
-export function strokeSegment(
-  edit: Edit,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  r: number,
-  color: string | null,
-): void {
-  const dist = Math.hypot(x1 - x0, y1 - y0);
-  const step = Math.max(1, r / 4);
-  const n = Math.max(1, Math.ceil(dist / step));
-  for (let i = 1; i <= n; i++) {
-    const t = i / n;
-    stamp(edit, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, r, color);
-  }
-}
-
 export interface Point {
   x: number;
   y: number;
 }
 
-/** Stamp along a chain of points (closing it back to the start if `closed`). */
-export function strokePath(edit: Edit, pts: Point[], r: number, color: string | null, closed = false): void {
-  if (pts.length === 0) return;
-  stamp(edit, pts[0].x, pts[0].y, r, color);
-  for (let i = 1; i < pts.length; i++) strokeSegment(edit, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, r, color);
-  if (closed && pts.length > 2) {
-    const a = pts[pts.length - 1];
-    strokeSegment(edit, a.x, a.y, pts[0].x, pts[0].y, r, color);
+export type LineStyle = 'solid' | 'dashed' | 'dotted';
+
+/**
+ * Paints a path as a chain of stamps, in a solid, dashed or dotted style.
+ * The dash pattern carries on across segments (and across pointer events
+ * during a freehand stroke), so corners and slow strokes look even.
+ */
+export class PathPainter {
+  /** Distance travelled along the path so far, in meters. */
+  private dist = 0;
+  private last: Point | null = null;
+  /** Dashed: length of each dash. */
+  private on = 0;
+  /** Dashed: length of one dash + gap. Dotted: spacing between dots. */
+  private period = 0;
+
+  constructor(
+    private edit: Edit,
+    private r: number,
+    private color: string | null,
+    private style: LineStyle = 'solid',
+  ) {
+    const w = 2 * r + 1;
+    if (style === 'dashed') {
+      this.on = 4 * w + 2;
+      this.period = this.on + 3 * w + 1;
+    } else if (style === 'dotted') {
+      this.period = Math.max(3, 2.5 * w);
+    }
   }
+
+  /** Start a new run of the path at (x, y), stamping it. */
+  moveTo(x: number, y: number): void {
+    this.last = { x, y };
+    this.dist = 0;
+    stamp(this.edit, x, y, this.r, this.color);
+  }
+
+  lineTo(x: number, y: number): void {
+    const a = this.last;
+    if (!a) return this.moveTo(x, y);
+    const len = Math.hypot(x - a.x, y - a.y);
+    this.last = { x, y };
+    if (len === 0) return;
+    const at = (d: number) => stamp(this.edit, a.x + ((x - a.x) * d) / len, a.y + ((y - a.y) * d) / len, this.r, this.color);
+
+    if (this.style === 'dotted') {
+      // One dot at every multiple of the spacing along the path.
+      const first = Math.floor(this.dist / this.period + 1) * this.period - this.dist;
+      for (let d = first; d <= len; d += this.period) at(d);
+    } else {
+      // Stamps close enough together to form a continuous line; dashed skips the gaps.
+      const step = Math.max(1, this.r / 4);
+      const n = Math.max(1, Math.ceil(len / step));
+      for (let i = 1; i <= n; i++) {
+        const d = (len * i) / n;
+        if (this.style === 'solid' || (this.dist + d) % this.period < this.on) at(d);
+      }
+    }
+    this.dist += len;
+  }
+}
+
+/** Paint along a chain of points (closing it back to the start if `closed`). */
+export function strokePath(
+  edit: Edit,
+  pts: Point[],
+  r: number,
+  color: string | null,
+  closed = false,
+  style: LineStyle = 'solid',
+): void {
+  if (pts.length === 0) return;
+  const painter = new PathPainter(edit, r, color, style);
+  painter.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) painter.lineTo(pts[i].x, pts[i].y);
+  if (closed && pts.length > 2) painter.lineTo(pts[0].x, pts[0].y);
 }
 
 /** Paint pixels x0..x1 (inclusive) of row y, across however many tiles that spans. */

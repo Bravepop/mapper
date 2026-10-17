@@ -18,6 +18,19 @@
           <input type="number" id="size-value" class="num" />
           <span class="unit">m</span>
         </div>
+        <div class="group" id="style-group">
+          <label for="line-style">Line</label>
+          <select id="line-style" title="Line style">
+            <option value="solid">Solid</option>
+            <option value="dashed">Dashed (trails)</option>
+            <option value="dotted">Dotted (routes, borders)</option>
+          </select>
+        </div>
+        <div class="group" id="smoothing-group">
+          <label for="smoothing" title="Steadies freehand lines: the paint trails the pointer on a short string">Smoothing</label>
+          <input type="range" id="smoothing" />
+          <span id="smoothing-value" class="unit"></span>
+        </div>
         <div class="group" id="shape-group">
           <label title="Fill rectangles, ellipses and closed polylines"><input type="checkbox" id="shape-fill" /> Filled</label>
         </div>

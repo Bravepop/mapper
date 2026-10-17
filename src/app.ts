@@ -6,6 +6,7 @@ import { EyedropperTool } from './tools/eyedropper';
 import { FillTool } from './tools/fill';
 import { ShapeTool } from './tools/shape';
 import { StrokeTool } from './tools/stroke';
+import type { LineStyle } from './core/paint';
 import type { Cursor, Tool, ToolEvent, ToolId } from './tools/tool';
 
 export interface AppState {
@@ -17,6 +18,10 @@ export interface AppState {
   tolerance: number;
   /** What the fill bucket treats as boundaries: the active layer only, or every visible layer. */
   fillSample: 'layer' | 'visible';
+  /** Line style for pencil, brush and shape outlines. */
+  lineStyle: LineStyle;
+  /** Freehand stabilizer strength, 0 (off) to MAX_SMOOTHING. */
+  smoothing: number;
   /** Rectangles, ellipses and closed polylines are filled (true) or outlined (false). */
   shapeFill: boolean;
   /** Grid cell size in meters. */
@@ -31,12 +36,15 @@ export const DEFAULT_STATE: AppState = {
   tolerance: 32,
   fillSample: 'layer',
   shapeFill: false,
+  lineStyle: 'solid',
+  smoothing: 0,
   gridSize: 25,
   showGrid: true,
 };
 
 export const MIN_SIZE = 1;
 export const MAX_SIZE = 200;
+export const MAX_SMOOTHING = 10;
 
 export class App {
   readonly camera = new Camera();
@@ -117,6 +125,7 @@ export class App {
   update(patch: Partial<AppState>): void {
     if (patch.tool && this.isDrawing) delete patch.tool;
     if (patch.tool && patch.tool !== this.state.tool) this.tool.deactivate?.();
+    if (patch.smoothing !== undefined) patch.smoothing = Math.round(Math.min(MAX_SMOOTHING, Math.max(0, patch.smoothing)));
     if (patch.size !== undefined) patch.size = Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, patch.size)));
     Object.assign(this.state, patch);
     for (const fn of this.stateListeners) fn();

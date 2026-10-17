@@ -66,7 +66,7 @@ Built in this order:
    - Polyline: click to add points; double-click or Enter finishes; Esc cancels.
    - Shift snaps to 45°.
    - Shapes rasterize hard-edged into the active layer, like the brush, so fill keeps working.
-3. [ ] **Smoothing and line styles:** optional stroke stabilizer; solid, dashed (trails) and dotted (sea routes, borders) lines.
+3. [x] **Smoothing and line styles:** optional stroke stabilizer; solid, dashed (trails) and dotted (sea routes, borders) lines.
 4. [ ] **Text and labels:** place names in a hand-lettered map font, with adjustable size, color and rotation, optionally following a curved path. Labels stay editable vector objects, with a small Select/move/delete tool.
 5. [ ] **Texture brushes:** paintable patterns such as trees (forest), tufts (swamp), peaks (mountain), waves (ocean) and stipple.
 6. [ ] **Stamps:** hand-drawn style symbols you place yourself: tree, rock, cave, tower, camp, ship, skull, and so on.
