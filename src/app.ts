@@ -388,6 +388,10 @@ export class App {
   private bindInput(): void {
     const c = this.canvas;
     c.addEventListener('contextmenu', (e) => e.preventDefault());
+    // pointerdown focuses the canvas itself. Without this, the browser's default
+    // mousedown focus runs after the tool and steals focus back from the label
+    // text box the Text tool (or a stamp label) just opened.
+    c.addEventListener('mousedown', (e) => e.preventDefault());
 
     c.addEventListener('pointerdown', (e) => {
       c.focus();
