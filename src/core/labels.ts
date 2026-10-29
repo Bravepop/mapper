@@ -19,6 +19,8 @@ export interface Label {
   rotation: number;
   /** -1..1: bends the text along an arc. 0 is straight, 1 a half circle arching up, -1 sagging down. */
   curve: number;
+  /** Typeface; missing (older maps, older peers) means Uncial Antiqua. */
+  font?: LabelFont;
 }
 
 /** One undoable label change: null `before` = added, null `after` = deleted. */
@@ -27,7 +29,26 @@ export interface LabelChange {
   after: Label | null;
 }
 
-export const LABEL_FONT = "'Uncial Antiqua', Georgia, serif";
+/** Bundled label typefaces (loaded from @fontsource in main.ts). */
+export const LABEL_FONTS = {
+  uncial: { name: 'Uncial Antiqua', css: "'Uncial Antiqua', Georgia, serif" },
+  cinzel: { name: 'Cinzel', css: "'Cinzel', Georgia, serif" },
+  fell: { name: 'IM Fell English', css: "'IM Fell English', Georgia, serif" },
+  medieval: { name: 'MedievalSharp', css: "'MedievalSharp', Georgia, serif" },
+} as const;
+
+export type LabelFont = keyof typeof LABEL_FONTS;
+
+export const DEFAULT_LABEL_FONT: LabelFont = 'uncial';
+
+export const isLabelFont = (v: unknown): v is LabelFont => typeof v === 'string' && Object.hasOwn(LABEL_FONTS, v);
+
+/** CSS font-family stack for a label's font, falling back to the default. */
+export const labelFontCss = (font: LabelFont | undefined): string =>
+  LABEL_FONTS[isLabelFont(font) ? font : DEFAULT_LABEL_FONT].css;
+
+/** The default label font, also used by the compass rose's letters. */
+export const LABEL_FONT = LABEL_FONTS[DEFAULT_LABEL_FONT].css;
 
 export const MIN_LABEL_SIZE = 2;
 export const MAX_LABEL_SIZE = 500;
@@ -123,5 +144,6 @@ function sanitize(raw: unknown): Label | null {
     color: typeof l.color === 'string' && /^#[0-9a-f]{6}$/i.test(l.color) ? l.color : '#2a211a',
     rotation: num(l.rotation, 0),
     curve: Math.min(1, Math.max(-1, num(l.curve, 0))),
+    ...(isLabelFont(l.font) && { font: l.font }),
   };
 }

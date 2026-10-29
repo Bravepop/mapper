@@ -1,7 +1,7 @@
 import { Camera } from './core/camera';
 import { History } from './core/history';
 import { CompassStore, type Compass, type CompassStyle } from './core/compass';
-import { LabelStore, type Label } from './core/labels';
+import { DEFAULT_LABEL_FONT, LabelStore, type Label, type LabelFont } from './core/labels';
 import { TileLayer } from './core/layer';
 import { LayerStack, type MapLayer } from './core/layers';
 import { Renderer } from './render/renderer';
@@ -45,6 +45,7 @@ export interface AppState {
   labelSize: number;
   labelRotation: number;
   labelCurve: number;
+  labelFont: LabelFont;
   /** Paper look: grain texture, darkened edges, sepia ink. Display only. */
   paperGrain: boolean;
   agedEdges: boolean;
@@ -92,6 +93,7 @@ export const DEFAULT_STATE: AppState = {
   labelSize: 20,
   labelRotation: 0,
   labelCurve: 0,
+  labelFont: DEFAULT_LABEL_FONT,
   gridSize: 25,
   showGrid: true,
 };
@@ -194,7 +196,7 @@ export class App {
   }
 
   /** Restyle the selected label live; the change is recorded for undo once the controls go idle. */
-  editLabel(patch: Partial<Pick<Label, 'size' | 'color' | 'rotation' | 'curve'>>): void {
+  editLabel(patch: Partial<Pick<Label, 'size' | 'color' | 'rotation' | 'curve' | 'font'>>): void {
     const label = this.selected;
     if (!label) return;
     this.labelEditBefore ??= { ...label };

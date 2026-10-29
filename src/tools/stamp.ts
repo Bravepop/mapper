@@ -51,6 +51,7 @@ export class StampTool implements Tool {
       color,
       rotation: 0,
       curve: 0,
+      font: this.app.state.labelFont,
     };
     this.editor.open(label, true, (l) => (l ? history.commit(edit, { before: null, after: l }) : history.commit(edit)));
   }

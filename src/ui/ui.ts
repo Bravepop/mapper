@@ -1,6 +1,6 @@
 import { isTextInput, MAX_GLYPH_SIZE, MAX_REVEAL_SIZE, MAX_SIZE, MAX_SMOOTHING, MIN_GLYPH_SIZE, MIN_SIZE, type App } from '../app';
 import { MAX_COMPASS_SIZE, MIN_COMPASS_SIZE, type CompassStyle } from '../core/compass';
-import { MAX_LABEL_SIZE, MIN_LABEL_SIZE } from '../core/labels';
+import { DEFAULT_LABEL_FONT, isLabelFont, LABEL_FONTS, MAX_LABEL_SIZE, MIN_LABEL_SIZE, type LabelFont } from '../core/labels';
 import type { LineStyle } from '../core/paint';
 import type { FileActions } from '../core/fileio';
 import type { Collab } from '../collab/collab';
@@ -162,6 +162,25 @@ function buildTopbar(app: App, files: FileActions): void {
   // Releasing a slider ends that change as one undo step.
   for (const el of [labelSize, labelSizeValue, labelRotation, labelCurve]) el.addEventListener('change', () => app.flushLabelEdit());
 
+  // Each option is shown in its own typeface.
+  const labelFont = $<HTMLSelectElement>('label-font');
+  for (const [id, f] of Object.entries(LABEL_FONTS)) {
+    const opt = new Option(f.name, id);
+    opt.style.fontFamily = f.css;
+    labelFont.append(opt);
+  }
+  // Unlike the sliders, a font choice sticks: it restyles the selected label
+  // (often the one just typed) and is also used for the labels that follow.
+  labelFont.addEventListener('change', () => {
+    const font = labelFont.value as LabelFont;
+    if (app.selected) {
+      app.editLabel({ font });
+      app.flushLabelEdit();
+    }
+    app.update({ labelFont: font });
+    syncLabel();
+  });
+
   const syncLabel = () => {
     const sel = app.selected;
     const s = app.state;
@@ -174,6 +193,9 @@ function buildTopbar(app: App, files: FileActions): void {
     $('label-rotation-value').textContent = `${rot}°`;
     labelCurve.value = String(curve);
     $('label-curve-value').textContent = String(curve);
+    const font = sel ? sel.font : s.labelFont;
+    labelFont.value = isLabelFont(font) ? font : DEFAULT_LABEL_FONT;
+    labelFont.style.fontFamily = LABEL_FONTS[labelFont.value as LabelFont].css;
     $('label-target').textContent = sel ? 'Selected label:' : 'New labels:';
   };
   app.labels.onChange(syncLabel);

@@ -1,9 +1,12 @@
+import '@fontsource/cinzel';
+import '@fontsource/im-fell-english';
+import '@fontsource/medievalsharp';
 import '@fontsource/uncial-antiqua';
 import './style.css';
 import { App } from './app';
 import { Collab } from './collab/collab';
 import { FileActions } from './core/fileio';
-import { LABEL_FONT } from './core/labels';
+import { LABEL_FONTS } from './core/labels';
 import { Autosave } from './core/storage';
 import { buildUi } from './ui/ui';
 
@@ -18,8 +21,8 @@ async function start(): Promise<void> {
   app.viewChanged();
   canvas.focus();
 
-  // Labels draw with the map font; redraw once it has loaded.
-  void document.fonts.load(`20px ${LABEL_FONT}`).then(() => app.requestRender());
+  // Labels draw with the map fonts; redraw as each one loads (text widths change too).
+  for (const f of Object.values(LABEL_FONTS)) void document.fonts.load(`20px ${f.css}`).then(() => app.requestRender());
 
   // Handy for debugging from the browser console.
   (window as unknown as { mapper: App }).mapper = app;

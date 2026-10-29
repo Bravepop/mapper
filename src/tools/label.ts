@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import { LABEL_FONT, newLabelId, type Label } from '../core/labels';
+import { labelFontCss, newLabelId, type Label } from '../core/labels';
 import { hitLabel } from '../render/labels';
 import { strokeTwoTone, type Cursor, type Tool, type ToolEvent } from './tool';
 
@@ -50,6 +50,7 @@ export class LabelTool implements Tool {
           color: s.color,
           rotation: (s.labelRotation * Math.PI) / 180,
           curve: s.labelCurve / 100,
+          font: s.labelFont,
         },
         true,
       );
@@ -228,13 +229,13 @@ export class LabelEditor {
     const cam = this.app.camera;
     this.input.style.left = `${cam.toScreenX(label.x)}px`;
     this.input.style.top = `${cam.toScreenY(label.y)}px`;
-    this.input.style.font = `${this.fontPx}px ${LABEL_FONT}`;
+    this.input.style.font = `${this.fontPx}px ${labelFontCss(label.font)}`;
   }
 
   private fit(): void {
     if (!this.target) return;
     const ctx = document.createElement('canvas').getContext('2d')!;
-    ctx.font = `${this.fontPx}px ${LABEL_FONT}`;
+    ctx.font = `${this.fontPx}px ${labelFontCss(this.target.label.font)}`;
     const w = ctx.measureText(this.input.value || 'Place name').width;
     this.input.style.width = `${Math.ceil(w + this.fontPx)}px`;
     this.input.placeholder = 'Place name';

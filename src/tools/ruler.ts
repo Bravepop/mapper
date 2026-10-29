@@ -90,6 +90,7 @@ export class RulerTool implements Tool {
       color: state.color,
       rotation: angle,
       curve: 0,
+      font: state.labelFont,
     };
     history.commit(edit, { before: null, after: label });
     this.clear();

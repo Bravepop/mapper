@@ -1,5 +1,5 @@
 import type { Camera } from '../core/camera';
-import { LABEL_FONT, type Label } from '../core/labels';
+import { labelFontCss, type Label, type LabelFont } from '../core/labels';
 
 /** Labels smaller than this on screen (px) aren't drawn. */
 const MIN_SCREEN_PX = 3;
@@ -8,9 +8,9 @@ const HALO = 'rgba(239, 228, 200, 0.85)';
 const measureCtx = document.createElement('canvas').getContext('2d')!;
 const REF_PX = 100;
 
-/** Width of `text` in meters when set at `size` meters tall. */
-export function textWidth(text: string, size: number): number {
-  measureCtx.font = `${REF_PX}px ${LABEL_FONT}`;
+/** Width of `text` in meters when set at `size` meters tall in `font`. */
+export function textWidth(text: string, size: number, font?: LabelFont): number {
+  measureCtx.font = `${REF_PX}px ${labelFontCss(font)}`;
   return (measureCtx.measureText(text).width / REF_PX) * size;
 }
 
@@ -22,7 +22,7 @@ const arcAngle = (label: Label) => Math.abs(label.curve) * Math.PI;
  * plus the vertical offset of the box center from the label's anchor.
  */
 export function labelBox(label: Label): { hw: number; hh: number; cy: number } {
-  const w = textWidth(label.text, label.size);
+  const w = textWidth(label.text, label.size, label.font);
   const hh = label.size * 0.6;
   const theta = arcAngle(label);
   if (theta < 1e-3) return { hw: w / 2, hh, cy: 0 };
@@ -52,7 +52,7 @@ export function drawLabel(ctx: CanvasRenderingContext2D, label: Label, cam: Came
   ctx.save();
   ctx.translate(cam.toScreenX(label.x), cam.toScreenY(label.y));
   ctx.rotate(label.rotation);
-  ctx.font = `${px}px ${LABEL_FONT}`;
+  ctx.font = `${px}px ${labelFontCss(label.font)}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
